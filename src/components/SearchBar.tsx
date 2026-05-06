@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface Props {
   placeholder?: string;
@@ -9,24 +9,16 @@ interface Props {
 
 export default function SearchBar({ placeholder = "搜索 ADC 药物、靶点、公司、适应症..." }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [value, setValue] = useState(searchParams.get("search") || "");
+  const [value, setValue] = useState("");
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      const params = new URLSearchParams(searchParams.toString());
-      if (value.trim()) {
-        params.set("search", value.trim());
-      } else {
-        params.delete("search");
-      }
-      params.delete("page");
-      router.push(`/products?${params.toString()}`);
-    },
-    [value, router, searchParams]
-  );
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (value.trim()) {
+      router.push(`/products?search=${encodeURIComponent(value.trim())}`);
+    } else {
+      router.push("/products");
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit} className="relative w-full max-w-2xl">

@@ -12,16 +12,18 @@ interface GraphNode extends d3.SimulationNodeDatum {
   product?: ADCProduct;
 }
 
-interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
-  source: string | GraphNode;
-  target: string | GraphNode;
-}
-
 const COLORS: Record<string, string> = {
   drug: "#00e5ff",
   target: "#ff6ec7",
   company: "#ffb74d",
   disease: "#69f0ae",
+};
+
+const GROUP_NAMES: Record<string, string> = {
+  drug: "药物",
+  target: "靶点",
+  company: "公司",
+  disease: "适应症",
 };
 
 interface Props {
@@ -30,63 +32,63 @@ interface Props {
 
 export default function ForceGraph({ products }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const router = useRouter();
   const [hovered, setHovered] = useState<GraphNode | null>(null);
-  const [selected, setSelected] = useState<GraphNode | null>(null);
+  const router = useRouter();
 
   const buildGraph = useCallback(() => {
     const nodes: GraphNode[] = [];
     const nodeMap = new Map<string, GraphNode>();
-    const links: GraphLink[] = [];
+    const links: { source: string; target: string }[] = [];
 
     products.forEach((p) => {
-      const drugNode: GraphNode = { id: p.id, name: p.brandName, group: "drug", product: p };
       if (!nodeMap.has(p.id)) {
-        nodeMap.set(p.id, drugNode);
-        nodes.push(drugNode);
+        nodeMap.set(p.id, { id: p.id, name: p.brandName, group: "drug", product: p });
       }
 
-      // Target node
       const tId = `target_${p.target}`;
       if (!nodeMap.has(tId)) {
         nodeMap.set(tId, { id: tId, name: p.target, group: "target" });
-        nodes.push(nodeMap.get(tId)!);
       }
       links.push({ source: p.id, target: tId });
 
-      // Company node
       const compName = p.companyOriginator.trim();
       const cId = `company_${compName}`;
       if (!nodeMap.has(cId)) {
         nodeMap.set(cId, { id: cId, name: compName, group: "company" });
-        nodes.push(nodeMap.get(cId)!);
       }
       links.push({ source: p.id, target: cId });
 
-      // Disease node
       const disName = p.indication[0]?.trim() || "其他";
       const dId = `disease_${disName}`;
       if (!nodeMap.has(dId)) {
         nodeMap.set(dId, { id: dId, name: disName, group: "disease" });
-        nodes.push(nodeMap.get(dId)!);
       }
       links.push({ source: p.id, target: dId });
     });
 
-    return { nodes, links };
+    return {
+      nodes: Array.from(nodeMap.values()),
+      links,
+    };
   }, [products]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
     const { nodes, links } = buildGraph();
-    if (!svgRef.current || !containerRef.current) return;
+    const W = container.clientWidth || 800;
+    const H = container.clientHeight || 600;
 
-    const w = containerRef.current.clientWidth;
-    const h = containerRef.current.clientHeight || 600;
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
-    svg.attr("width", w).attr("height", h);
+    // Clear and create SVG
+    container.innerHTML = "";
+    const svg = d3.select(container)
+      .append("svg")
+      .attr("width", W)
+      .attr("height", H)
+      .style("display", "block");
 
+    // Glow filter
     const defs = svg.append("defs");
     const filter = defs.append("filter").attr("id", "fg-glow");
     filter.append("feGaussianBlur").attr("stdDeviation", "2.5").attr("result", "blur");
@@ -96,17 +98,21 @@ export default function ForceGraph({ products }: Props) {
 
     const g = svg.append("g");
 
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 3])
-      .on("zoom", (event) => g.attr("transform", event.transform));
-    svg.call(zoom);
+    // Zoom
+    svg.call(
+      d3.zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.3, 3])
+        .on("zoom", (event) => g.attr("transform", event.transform))
+    );
 
+    // Simulation
     const simulation = d3.forceSimulation<GraphNode>(nodes)
-      .force("link", d3.forceLink<GraphNode, GraphLink>(links).id((d) => d.id).distance(80))
+      .force("link", d3.forceLink<GraphNode, { source: string; target: string }>(links).id((d) => d.id).distance(80))
       .force("charge", d3.forceManyBody().strength(-180))
-      .force("center", d3.forceCenter(w / 2, h / 2))
+      .force("center", d3.forceCenter(W / 2, H / 2))
       .force("collision", d3.forceCollide().radius(30));
 
+    // Links
     const link = g.append("g")
       .selectAll("line")
       .data(links)
@@ -114,6 +120,7 @@ export default function ForceGraph({ products }: Props) {
       .attr("stroke", "rgba(0, 229, 255, 0.15)")
       .attr("stroke-width", 1);
 
+    // Nodes
     const node = g.append("g")
       .selectAll("circle")
       .data(nodes)
@@ -125,6 +132,7 @@ export default function ForceGraph({ products }: Props) {
       .style("filter", "url(#fg-glow)")
       .style("cursor", "pointer");
 
+    // Labels
     const labels = g.append("g")
       .selectAll("text")
       .data(nodes)
@@ -137,11 +145,11 @@ export default function ForceGraph({ products }: Props) {
       .style("pointer-events", "none")
       .style("text-shadow", "0 0 6px rgba(0,229,255,0.5)");
 
+    // Interactions
     node.on("mouseenter", (_, d) => setHovered(d))
       .on("mouseleave", () => setHovered(null))
       .on("click", (event, d) => {
         event.stopPropagation();
-        setSelected(d);
         if (d.group === "drug") {
           router.push(`/products/${d.id}`);
         } else if (d.group === "target") {
@@ -153,33 +161,46 @@ export default function ForceGraph({ products }: Props) {
         }
       });
 
-    svg.on("click", () => setSelected(null));
+    svg.on("click", () => setHovered(null));
 
+    // Tick
     simulation.on("tick", () => {
       link
-        .attr("x1", (d) => (d.source as GraphNode).x!)
-        .attr("y1", (d) => (d.source as GraphNode).y!)
-        .attr("x2", (d) => (d.target as GraphNode).x!)
-        .attr("y2", (d) => (d.target as GraphNode).y!);
+        .attr("x1", (d: any) => (d.source as GraphNode).x!)
+        .attr("y1", (d: any) => (d.source as GraphNode).y!)
+        .attr("x2", (d: any) => (d.target as GraphNode).x!)
+        .attr("y2", (d: any) => (d.target as GraphNode).y!);
       node.attr("cx", (d) => d.x!).attr("cy", (d) => d.y!);
       labels.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
-    return () => { simulation.stop(); };
+    // Resize
+    const handleResize = () => {
+      const rw = container.clientWidth || 800;
+      const rh = container.clientHeight || 600;
+      svg.attr("width", rw).attr("height", rh);
+      simulation.force("center", d3.forceCenter(rw / 2, rh / 2));
+      simulation.alpha(0.1).restart();
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      simulation.stop();
+      window.removeEventListener("resize", handleResize);
+      container.innerHTML = "";
+    };
   }, [buildGraph, router]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[600px] bg-grid rounded-xl overflow-hidden border border-cyber-border">
-      <svg ref={svgRef} className="w-full h-full" />
+    <div className="relative w-full" style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}>
+      <div ref={containerRef} className="w-full h-full bg-grid rounded-xl overflow-hidden border border-cyber-border" />
       {/* Tooltip */}
       {hovered && (
-        <div className="absolute top-4 left-4 bg-cyber-card border border-cyber-border rounded-lg px-4 py-3 text-sm z-10 pointer-events-none">
+        <div className="absolute top-4 left-4 bg-cyber-card border border-cyber-border rounded-lg px-4 py-3 text-sm z-10 pointer-events-none backdrop-blur-xl">
           <div className="font-bold" style={{ color: COLORS[hovered.group] }}>
             {hovered.name}
           </div>
-          <div className="text-xs text-cyber-text2 mt-1">
-            {hovered.group === "drug" ? "ADC 药物" : hovered.group === "target" ? "靶点" : hovered.group === "company" ? "公司" : "适应症"}
-          </div>
+          <div className="text-xs text-cyber-text2 mt-1">{GROUP_NAMES[hovered.group]}</div>
           {hovered.product && (
             <div className="text-xs text-cyber-text2 mt-1">
               {hovered.product.companyOriginator} · {hovered.product.stage}
@@ -188,13 +209,11 @@ export default function ForceGraph({ products }: Props) {
         </div>
       )}
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-cyber-card border border-cyber-border rounded-lg px-3 py-2 text-xs flex gap-4">
+      <div className="absolute bottom-4 right-4 bg-cyber-card border border-cyber-border rounded-lg px-3 py-2 text-xs flex gap-4 backdrop-blur-xl">
         {Object.entries(COLORS).map(([group, color]) => (
           <div key={group} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-cyber-text2">
-              {group === "drug" ? "药物" : group === "target" ? "靶点" : group === "company" ? "公司" : "适应症"}
-            </span>
+            <span className="text-cyber-text2">{GROUP_NAMES[group]}</span>
           </div>
         ))}
       </div>

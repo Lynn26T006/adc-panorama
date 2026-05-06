@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BioDlink ADC Panorama — 全球ADC药物全景图谱",
+  title: "ADC Panorama — 全球ADC药物全景图谱",
   description: "追踪全球已上市及IND阶段抗体药物偶联物(ADC)，涵盖靶点、CMC、偶联工艺、制剂配方等深度数据。由 Lynn 创建维护。",
   authors: [{ name: "Lynn", url: "https://github.com/lynn" }],
 };

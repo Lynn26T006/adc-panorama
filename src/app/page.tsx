@@ -30,7 +30,7 @@ export default function HomePage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-cyber-accent/5 blur-[120px] rounded-full" />
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight">
-              <span className="gradient-text">BioDlink ADC Panorama</span>
+              <span className="gradient-text">ADC Panorama</span>
             </h1>
             <p className="mt-4 text-lg text-cyber-text2 max-w-2xl mx-auto">
               全球抗体药物偶联物全景数据库 — 追踪已上市及 IND 阶段 ADC 产品，深度覆盖 CMC、偶联工艺、制剂配方与冻干工艺

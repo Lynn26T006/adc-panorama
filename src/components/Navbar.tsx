@@ -18,7 +18,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14">
           <Link href="/" className="flex items-center gap-2 no-underline">
             <span className="text-lg font-extrabold tracking-wider gradient-text">
-              BioDlink ADC Panorama
+              ADC Panorama
             </span>
           </Link>
           <div className="flex items-center gap-1">
