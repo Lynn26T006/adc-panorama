@@ -41,15 +41,12 @@ export default function ForceGraph({ products }: Props) {
     const W = container.clientWidth;
     const H = container.clientHeight;
 
-    // --- Scene ---
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // --- Camera ---
     const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 10);
     camera.position.set(0, 0.5, 3.5);
 
-    // --- Renderer ---
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -57,7 +54,6 @@ export default function ForceGraph({ products }: Props) {
     container.appendChild(renderer.domElement);
     renderer.domElement.style.cursor = "grab";
 
-    // --- Lights ---
     scene.add(new THREE.AmbientLight(0x334466, 1.5));
     const dirLight = new THREE.DirectionalLight(0x00ccff, 1);
     dirLight.position.set(2, 3, 3);
@@ -66,7 +62,6 @@ export default function ForceGraph({ products }: Props) {
     backLight.position.set(-2, -1, -2);
     scene.add(backLight);
 
-    // --- Controls ---
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
@@ -77,7 +72,6 @@ export default function ForceGraph({ products }: Props) {
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
-    // --- Earth globe ---
     const globeGeo = new THREE.SphereGeometry(0.95, 64, 48);
     const globeMat = new THREE.MeshPhongMaterial({
       color: 0x0a2244,
@@ -90,7 +84,6 @@ export default function ForceGraph({ products }: Props) {
     const globe = new THREE.Mesh(globeGeo, globeMat);
     scene.add(globe);
 
-    // Atmosphere glow
     const glowGeo = new THREE.SphereGeometry(0.98, 64, 48);
     const glowMat = new THREE.ShaderMaterial({
       uniforms: {},
@@ -111,7 +104,6 @@ export default function ForceGraph({ products }: Props) {
     const glow = new THREE.Mesh(glowGeo, glowMat);
     scene.add(glow);
 
-    // Wireframe grid (like latitude/longitude)
     const gridGeo = new THREE.SphereGeometry(0.96, 32, 20);
     const gridMat = new THREE.MeshBasicMaterial({
       color: 0x003366,
@@ -122,7 +114,6 @@ export default function ForceGraph({ products }: Props) {
     const grid = new THREE.Mesh(gridGeo, gridMat);
     scene.add(grid);
 
-    // --- Stars background ---
     const starsGeo = new THREE.BufferGeometry();
     const starsCount = 600;
     const starsPos = new Float32Array(starsCount * 3);
@@ -139,7 +130,6 @@ export default function ForceGraph({ products }: Props) {
     const stars = new THREE.Points(starsGeo, starsMat);
     scene.add(stars);
 
-    // --- Drug nodes ---
     const nodeGroup = new THREE.Group();
     const nodesMap = new Map<THREE.Mesh, ADCProduct>();
 
@@ -147,17 +137,14 @@ export default function ForceGraph({ products }: Props) {
       const cfg = STAGE_CONFIG[p.stage] || STAGE_CONFIG["IND"];
       const [latMin, latMax] = cfg.latRange;
 
-      // Random position within stage's latitude band
       const lat = THREE.MathUtils.degToRad(latMin + Math.random() * (latMax - latMin));
       const lon = Math.random() * Math.PI * 2;
 
-      // Spherical to Cartesian on globe surface
       const r = 0.96;
       const x = r * Math.cos(lat) * Math.cos(lon);
       const y = r * Math.sin(lat);
       const z = r * Math.cos(lat) * Math.sin(lon);
 
-      // Node sphere
       const nodeGeo = new THREE.SphereGeometry(cfg.size, 12, 8);
       const nodeMat = new THREE.MeshPhongMaterial({
         color: new THREE.Color(cfg.color),
@@ -172,7 +159,6 @@ export default function ForceGraph({ products }: Props) {
       nodeGroup.add(mesh);
       nodesMap.set(mesh, p);
 
-      // Text label sprite
       const labelName = p.brandName.length > 16 ? p.brandName.slice(0, 14) + "…" : p.brandName;
       const canvas = document.createElement("canvas");
       canvas.width = 256;
@@ -195,7 +181,6 @@ export default function ForceGraph({ products }: Props) {
     scene.add(nodeGroup);
     nodesRef.current = nodesMap;
 
-    // --- Raycaster ---
     const raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 0.1;
 
@@ -236,7 +221,6 @@ export default function ForceGraph({ products }: Props) {
       }
     });
 
-    // --- Animation ---
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
@@ -246,7 +230,6 @@ export default function ForceGraph({ products }: Props) {
     }
     animate();
 
-    // --- Resize ---
     const handleResize = () => {
       const rw = container.clientWidth;
       const rh = container.clientHeight;
@@ -267,7 +250,6 @@ export default function ForceGraph({ products }: Props) {
     <div className="relative w-full" style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}>
       <div ref={containerRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border" />
 
-      {/* Hover tooltip */}
       {hovered && !selected && (
         <div className="fixed z-50 bg-black/85 border border-cyber-border rounded-lg px-3 py-2 text-sm pointer-events-none backdrop-blur-xl"
           style={{ left: tooltipPos.x + 15, top: tooltipPos.y - 10 }}>
@@ -276,7 +258,6 @@ export default function ForceGraph({ products }: Props) {
         </div>
       )}
 
-      {/* Selected detail panel */}
       {selected && (
         <div className="absolute top-4 right-4 w-80 max-h-[70vh] overflow-y-auto bg-black/90 border border-cyber-border rounded-xl p-5 z-20 backdrop-blur-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between mb-3">
@@ -308,7 +289,6 @@ export default function ForceGraph({ products }: Props) {
         </div>
       )}
 
-      {/* Legend */}
       <div className="absolute bottom-4 right-4 bg-black/80 border border-cyber-border rounded-lg px-3 py-2 text-xs flex gap-3 backdrop-blur-xl">
         {Object.entries(STAGE_CONFIG).map(([stage, { color }]) => (
           <div key={stage} className="flex items-center gap-1.5">

@@ -1,0 +1,14 @@
+● 基于 Next.js 构建了全球 ADC 药物全景数据库，首页嵌入 Three.js 交互式力导向星球图，按临床阶段将 200+ 款药物分布在球体纬度带上，支持拖拽旋转、点击查看详情。通过 Python 爬虫从 ADCdb、ClinicalTrials.gov、openFDA、PubChem、RCSB PDB 五个公开数据源抓取 3500+ ADC 的靶点、CMC、偶联工艺、冻干制剂、细胞株序列、载荷 SMILES/结构式、PDB 编号和生产厂家信息。静态导出后部署到 Netlify，GitHub Actions 每周自动增量更新，全程无需人工维护。
+
+-/home/lynn/adc-panorama/                                                                       
+       4 -├── src/                                                                                       
+       5 -│   ├── app/              # 页面路由                                                           
+       6 -│   │   ├── page.tsx      # 首页                                                               
+       7 -│   │   ├── visualize/    # 可视化页                                                           
+       8 -│   │   └── products/     # 产品列表/详情                                                      
+       9 -│   └── components/       # 组件 (ForceGraph, Pagination, StatsCards...)                       
+      10 -├── data/                                                                                      
+      11 -│   ├── adc_products.json # 主数据库                                                           
+      12 -│   └── scripts/          # 爬虫脚本                                                           
+      13 -├── .github/workflows/    # 自动更新 CI                                                        
+      14 -└── out/                  # 静态导出 (python -m http.server 3000)  
