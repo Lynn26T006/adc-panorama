@@ -11,7 +11,7 @@ type FieldProps = {
   color?: "accent" | "green" | "pink" | "orange" | "purple" | "default";
 };
 
-// 每个颜色对应一套 cyber 风格的边框和文字样式
+// 每个颜色对应一套cyber风格的边框和文字样式
 const palette = {
   accent: "border-cyber-accent/50 text-cyber-accent hover:border-cyber-accent hover:text-cyber-accent",
   green: "border-cyber-green/50 text-cyber-green hover:border-cyber-green hover:text-cyber-green",
@@ -38,7 +38,7 @@ export default function ClickableField({
     ? `cyber-badge ${palette[color]}`
     : `text-sm transition-all duration-200 cursor-pointer hover:text-cyber-accent hover:underline decoration-cyber-accent/50 underline-offset-4 ${palette[color]}`;
 
-  // 外链场景 — 新标签页打开，带个小箭头图标
+  // 外链场景，新标签页打开，带个小箭头图标
   if (external && href) {
     return (
       <a

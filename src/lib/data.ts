@@ -74,7 +74,7 @@ export interface PaginatedResult {
 export function filterAndPaginate(params: FilterParams): PaginatedResult {
   let pool = [...store];
 
-  // 关键词搜索 — 匹配商品名、通用名、靶点、适应症、公司
+  // 关键词搜索，匹配商品名、通用名、靶点、适应症、公司
   if (params.search) {
     const q = params.search.toLowerCase();
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

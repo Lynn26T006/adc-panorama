@@ -1,7 +1,5 @@
-// ============================================================
-// 首页 — ADC Panorama 的主入口
-// 包含：Hero 标题区 + 统计卡片 + 3D 星球可视化 + 快速导航
-// ============================================================
+// 首页，ADC Panorama的主入口
+// 包含：Hero标题区 + 统计卡片 + 3D星球可视化 + 快速导航
 
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -13,16 +11,16 @@ import ClickableField from "@/components/ClickableField";
 import ForceGraph from "@/components/ForceGraph";
 
 export const metadata: Metadata = {
-  title: "ADC Panorama — 全球ADC药物全景图谱",
+  title: "ADC Panorama，全球ADC药物全景图谱",
 };
 
 export default function HomePage() {
-  // ---- 预先从 JSON 数据库里取出所有数据，计算统计值 ----
-  const allProducts = getAllProducts();          // 全部 3500+ 条 ADC 记录
-  const targets = getProductTargets();            // 去重后所有靶点
-  const approved = allProducts.filter((p) => p.stage === "已上市");  // 已获批上市
-  const ind = allProducts.filter((p) => p.stage === "IND");          // 临床前/IND 阶段
-  const clinical = allProducts.filter((p) =>                             // 临床在研(NDA+I期+II期+III期)
+  // 预先从JSON数据库里取出所有数据，计算统计值
+  const allProducts = getAllProducts();
+  const targets = getProductTargets();
+  const approved = allProducts.filter((p) => p.stage === "已上市");
+  const ind = allProducts.filter((p) => p.stage === "IND");
+  const clinical = allProducts.filter((p) =>
     ["NDA", "临床III期", "临床II期", "临床I期"].includes(p.stage)
   );
   const companies = [...new Set(allProducts.map((p) => p.companyOriginator))]; // 去重后的原研公司
@@ -34,7 +32,7 @@ export default function HomePage() {
 
       <main className="flex-1">
 
-        {/* ======== 第1区: Hero 标题区 ======== */}
+        {/* 第1区: Hero 标题区 */}
         <section className="relative overflow-hidden border-b border-cyber-border">
           {/* 背景: 网格纹理 */}
           <div className="absolute inset-0 bg-grid opacity-50" />
@@ -42,15 +40,15 @@ export default function HomePage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-cyber-accent/5 blur-[120px] rounded-full" />
 
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
-            {/* 主标题 — 渐变色文字 */}
+            {/* 主标题，渐变色文字 */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight">
               <span className="gradient-text">ADC Panorama</span>
             </h1>
-            {/* 副标题 — 数据库简介 */}
+            {/* 副标题，数据库简介 */}
             <p className="mt-4 text-lg text-cyber-text2 max-w-2xl mx-auto">
-              全球抗体药物偶联物全景数据库 — 追踪已上市及 IND 阶段 ADC 产品，深度覆盖 CMC、偶联工艺、制剂配方与冻干工艺
+              全球抗体药物偶联物全景数据库，追踪已上市及 IND 阶段 ADC 产品，深度覆盖 CMC、偶联工艺、制剂配方与冻干工艺
             </p>
-            {/* 搜索栏 — 用 React.Suspense 包裹，加载时显示骨架屏 */}
+            {/* 搜索栏，用 React.Suspense 包裹，加载时显示骨架屏 */}
             <div className="mt-8 flex justify-center">
               <Suspense fallback={<div className="w-full max-w-2xl h-11 bg-cyber-card rounded-xl animate-pulse" />}>
                 <SearchBar placeholder="搜索 ADC 药物、靶点、公司..." />
@@ -59,7 +57,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ======== 第2区: 统计卡片（6格） ======== */}
+        {/* 第2区: 统计卡片（6格） */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
           <StatsCards
             drugCount={allProducts.length}
@@ -71,18 +69,18 @@ export default function HomePage() {
           />
         </section>
 
-        {/* ======== 第3区: 3D 星球可视化图谱 ======== */}
+        {/* 第3区: 3D 星球可视化图谱 */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
           <div className="cyber-card overflow-hidden">
             <ForceGraph products={allProducts} />
           </div>
         </section>
 
-        {/* ======== 第4区: 快速导航卡片 ======== */}
+        {/* 第4区: 快速导航卡片 */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            {/* 按研发阶段筛选 — 每个阶段是一个可点击的徽章 */}
+            {/* 按研发阶段筛选，每个阶段是一个可点击的徽章 */}
             <div className="cyber-card p-6">
               <h2 className="text-lg font-bold text-cyber-text mb-4 flex items-center gap-2">
                 <span className="w-1.5 h-5 bg-cyber-accent rounded-full glow-border" />
@@ -109,7 +107,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 热门靶点 — 粉红色徽章 */}
+            {/* 热门靶点，粉红色徽章 */}
             <div className="cyber-card p-6">
               <h2 className="text-lg font-bold text-cyber-text mb-4 flex items-center gap-2">
                 <span className="w-1.5 h-5 rounded-full" style={{ backgroundColor: "#ff6ec7", boxShadow: "0 0 10px rgba(255,110,199,0.3)" }} />
@@ -130,7 +128,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 按偶联方式 — 紫色徽章 */}
+            {/* 按偶联方式，紫色徽章 */}
             <div className="cyber-card p-6">
               <h2 className="text-lg font-bold text-cyber-text mb-4 flex items-center gap-2">
                 <span className="w-1.5 h-5 rounded-full" style={{ backgroundColor: "#b388ff", boxShadow: "0 0 10px rgba(179,136,255,0.3)" }} />

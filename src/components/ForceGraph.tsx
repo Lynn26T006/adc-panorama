@@ -43,7 +43,6 @@ export default function ForceGraph({ products }: Props) {
     const w = box.clientWidth;
     const h = box.clientHeight;
 
-    // ---- 场景初始化 ----
     const scene = new THREE.Scene();
     threeScene.current = scene;
 
@@ -77,7 +76,6 @@ export default function ForceGraph({ products }: Props) {
     ctrl.target.set(0, 0, 0);
     orbitCtrl.current = ctrl;
 
-    // ---- 球体本身 ----
     const globeGeo = new THREE.SphereGeometry(0.95, 64, 48);
     const globeMat = new THREE.MeshPhongMaterial({
       color: 0x0a2244,
@@ -89,7 +87,7 @@ export default function ForceGraph({ products }: Props) {
     });
     scene.add(new THREE.Mesh(globeGeo, globeMat));
 
-    // 大气辉光 — 用 shader 做出边缘发光的效果
+    // 大气辉光，用shader做出边缘发光的效果
     const auraGeo = new THREE.SphereGeometry(0.98, 64, 48);
     const auraMat = new THREE.ShaderMaterial({
       uniforms: {},
@@ -109,7 +107,7 @@ export default function ForceGraph({ products }: Props) {
     });
     scene.add(new THREE.Mesh(auraGeo, auraMat));
 
-    // 经纬网 — wireframe 球体套在外面，弱透明度
+    // 经纬网，wireframe球体套在外面，弱透明度
     const gridGeo = new THREE.SphereGeometry(0.96, 32, 20);
     const gridMat = new THREE.MeshBasicMaterial({
       color: 0x003366,
@@ -119,7 +117,6 @@ export default function ForceGraph({ products }: Props) {
     });
     scene.add(new THREE.Mesh(gridGeo, gridMat));
 
-    // ---- 星空背景 ----
     const starData = new THREE.BufferGeometry();
     const totalStars = 600;
     const posArr = new Float32Array(totalStars * 3);
@@ -136,7 +133,6 @@ export default function ForceGraph({ products }: Props) {
     const starField = new THREE.Points(starData, starMat);
     scene.add(starField);
 
-    // ---- 药物节点 ----
     const drugGroup = new THREE.Group();
     const drugMap = new Map<THREE.Mesh, ADCProduct>();
 
@@ -168,7 +164,7 @@ export default function ForceGraph({ products }: Props) {
       drugGroup.add(node);
       drugMap.set(node, drug);
 
-      // 标签 — 用 canvas 画到 sprite 贴图上
+      // 标签，用canvas画到sprite贴图上
       const displayName = drug.brandName.length > 16 ? drug.brandName.slice(0, 14) + "…" : drug.brandName;
       const canvasEl = document.createElement("canvas");
       canvasEl.width = 256;
@@ -191,7 +187,7 @@ export default function ForceGraph({ products }: Props) {
     scene.add(drugGroup);
     meshToDrug.current = drugMap;
 
-    // ---- 射线检测（鼠标悬停和点击） ----
+    // 射线检测，处理鼠标悬停和点击
     const raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 0.1;
 

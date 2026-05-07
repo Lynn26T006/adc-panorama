@@ -1,62 +1,50 @@
-/* ============================================================
-   ADC Panorama 全局样式
-   赛博朋克(Cyberpunk)暗色主题 + Tailwind CSS v4
-   定义了: 颜色体系、卡片、徽章、动画、流星效果
-   ============================================================ */
-
 @import "tailwindcss";
 
-/* ---- 自定义颜色变量(CSS Custom Properties) ----
-   所有颜色都通过 --color-cyber-* 定义，
-   在 Tailwind 中可以直接用 bg-cyber-bg、text-cyber-accent 等类名引用
-   ============================================================ */
+/* 自定义颜色变量(CSS Custom Properties)，
+   所有颜色通过--color-cyber-*定义，
+   在Tailwind中直接用bg-cyber-bg、text-cyber-accent等类名引用 */
 @theme {
-  --color-cyber-bg: #080c14;               /* 最深背景 — 接近纯黑的深蓝 */
-  --color-cyber-surface: #0a121e;           /* 次级背景 — 稍浅一点 */
-  --color-cyber-card: rgba(10, 18, 30, 0.85); /* 卡片背景 — 半透明带毛玻璃 */
-  --color-cyber-border: rgba(0, 229, 255, 0.2); /* 边框 — 青色半透明 */
-  --color-cyber-accent: #00e5ff;            /* 主强调色 — 亮青色(Cyan) */
-  --color-cyber-accent2: #b388ff;           /* 次强调色 — 浅紫色 */
-  --color-cyber-green: #69f0ae;             /* 绿色 — 用于"已上市"等积极状态 */
-  --color-cyber-pink: #ff6ec7;              /* 粉色 — 用于"IND""靶点"等 */
-  --color-cyber-orange: #ffb74d;            /* 橙色 — 用于 NDA 等中间阶段 */
-  --color-cyber-text: #e0f7fa;              /* 主文字色 — 接近白色 */
-  --color-cyber-text2: #80cbc4;             /* 次级文字色 — 灰青色 */
+  --color-cyber-bg: #080c14;               /* 最深背景，接近纯黑的深蓝 */
+  --color-cyber-surface: #0a121e;           /* 次级背景，稍浅一点 */
+  --color-cyber-card: rgba(10, 18, 30, 0.85); /* 卡片背景，半透明带毛玻璃 */
+  --color-cyber-border: rgba(0, 229, 255, 0.2); /* 边框，青色半透明 */
+  --color-cyber-accent: #00e5ff;            /* 主强调色，亮青色(Cyan) */
+  --color-cyber-accent2: #b388ff;           /* 次强调色，浅紫色 */
+  --color-cyber-green: #69f0ae;             /* 绿色，用于"已上市"等积极状态 */
+  --color-cyber-pink: #ff6ec7;              /* 粉色，用于"IND""靶点"等 */
+  --color-cyber-orange: #ffb74d;            /* 橙色，用于 NDA 等中间阶段 */
+  --color-cyber-text: #e0f7fa;              /* 主文字色，接近白色 */
+  --color-cyber-text2: #80cbc4;             /* 次级文字色，灰青色 */
   --color-cyber-glow: rgba(0, 229, 255, 0.3); /* 发光效果色 */
   --font-cyber: 'Inter Variable', 'Noto Sans SC Variable', 'Segoe UI', system-ui, sans-serif;
 }
 
-/* ---- 全局 body 样式 ---- */
-body {
+/* 全局body样式 */body {
   background: var(--color-cyber-bg);
   color: var(--color-cyber-text);
   font-family: var(--font-cyber);
   -webkit-font-smoothing: antialiased; /* macOS/ iOS 字体边缘平滑 */
 }
 
-/* ---- 自定义滚动条（暗色风格） ---- */
-::-webkit-scrollbar { width: 6px; }
+/* 自定义滚动条（暗色风格） */::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-cyber-bg); }
 ::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0, 229, 255, 0.5); }
 
-/* ---- 文字选中高亮色 ---- */
-::selection { background: rgba(0, 229, 255, 0.3); color: white; }
+/* 文字选中高亮色 */::selection { background: rgba(0, 229, 255, 0.3); color: white; }
 
-/* ============================================================
    工具类(Utilities)
-   ============================================================ */
 
-/* 文字发光 — 青色光晕围绕文字 */
+/* 文字发光，青色光晕围绕文字 */
 .glow-text { text-shadow: 0 0 10px var(--color-cyber-glow); }
 
-/* 边框发光 — 小光晕 */
+/* 边框发光，小光晕 */
 .glow-border { box-shadow: 0 0 20px var(--color-cyber-glow); }
 
-/* 边框发光 — 大光晕 */
+/* 边框发光，大光晕 */
 .glow-border-lg { box-shadow: 0 0 30px rgba(0, 229, 255, 0.5); }
 
-/* 网格背景纹理 — 60px x 60px 的青色细线网格 */
+/* 网格背景纹理，60px x 60px的青色细线网格 */
 .bg-grid {
   background-image:
     linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
@@ -64,10 +52,7 @@ body {
   background-size: 60px 60px;
 }
 
-/* ---- 赛博卡片(Cyber Card) ----
-   半透明毛玻璃效果 + 圆角 + 青色边框
-   鼠标悬停时边框变亮、出现青色光晕
-   ============================================================ */
+/* ---- 赛博卡片(Cyber Card) 半透明毛玻璃效果 + 圆角 + 青色边框 鼠标悬停时边框变亮、出现青色光晕 */
 .cyber-card {
   background: color-mix(in srgb, #0a121e 85%, transparent);
   backdrop-filter: blur(20px);       /* 毛玻璃模糊效果 */
@@ -80,10 +65,7 @@ body {
   box-shadow: 0 0 30px rgba(0, 229, 255, 0.15);
 }
 
-/* ---- 赛博徽章(Cyber Badge) ----
-   用于展示标签：阶段、靶点、适应症等
-   圆角胶囊形状 + 细边框 + 悬停发光
-   ============================================================ */
+/* ---- 赛博徽章(Cyber Badge) 用于展示标签：阶段、靶点、适应症等 圆角胶囊形状 + 细边框 + 悬停发光 */
 .cyber-badge {
   display: inline-flex;
   align-items: center;
@@ -98,17 +80,13 @@ body {
 }
 .cyber-badge:hover { box-shadow: 0 0 12px currentColor; }
 
-/* ---- 表格行悬停效果 ---- */
-.cyber-row {
+/* 表格行悬停效果 */.cyber-row {
   transition: all 0.2s;
   cursor: pointer;
 }
 .cyber-row:hover { background: rgba(0, 229, 255, 0.06); }
 
-/* ---- 渐变文字 ----
-   从青色到紫色的渐变，文字本身透明，
-   通过 background-clip 把渐变映射到文字上
-   ============================================================ */
+/* ---- 渐变文字 从青色到紫色的渐变，文字本身透明， 通过 background-clip 把渐变映射到文字上 */
 .gradient-text {
   background: linear-gradient(135deg, var(--color-cyber-accent) 0%, var(--color-cyber-accent2) 100%);
   -webkit-background-clip: text;
@@ -116,19 +94,14 @@ body {
   background-clip: text;
 }
 
-/* ---- 脉冲发光动画 ----
-   边框光晕在 2 秒内一明一暗循环
-   ============================================================ */
+/* ---- 脉冲发光动画 边框光晕在 2 秒内一明一暗循环 */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 10px var(--color-cyber-glow); }
   50% { box-shadow: 0 0 25px rgba(0, 229, 255, 0.6); }
 }
 .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
-/* ---- 扫描线动画 ----
-   一条青色横线从上到下扫过，模仿科幻 HUD 效果
-   用在 .scan-line 元素的 ::after 伪元素上
-   ============================================================ */
+/* ---- 扫描线动画 一条青色横线从上到下扫过，模仿科幻 HUD 效果 用在 .scan-line 元素的 ::after 伪元素上 */
 @keyframes scan-line {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
@@ -143,13 +116,11 @@ body {
   pointer-events: none;               /* 不影响鼠标操作 */
 }
 
-/* ============================================================
    流星/射击星效果
    8 颗流星在屏幕背景上以不同速度、不同延迟从左上方划过
    每颗流星由两个元素组成：
    - .meteor 本身: 2px 青色圆点(头部)
    - .meteor::after: 50px 渐变尾巴(拖尾)
-   ============================================================ */
 
 @keyframes meteor {
   0% {
@@ -165,7 +136,7 @@ body {
   }
 }
 
-/* 流星容器 — 覆盖全屏，固定定位，不影响其他元素交互 */
+/* 流星容器，覆盖全屏，固定定位，不影响其他元素交互 */
 .meteor-container {
   position: fixed;
   top: 0;
@@ -177,7 +148,7 @@ body {
   overflow: hidden;        /* 流星飞出屏幕后不显示滚动条 */
 }
 
-/* 单颗流星 — 2px 青色圆点 */
+/* 单颗流星，2px青色圆点 */
 .meteor {
   position: absolute;
   top: 0;
@@ -190,7 +161,7 @@ body {
   animation: meteor linear infinite;                   /* 无限循环 */
 }
 
-/* 流星尾巴 — 水平渐变的细线，从青色渐变到透明 */
+/* 流星尾巴，水平渐变的细线，从青色渐变到透明 */
 .meteor::after {
   content: '';
   position: absolute;

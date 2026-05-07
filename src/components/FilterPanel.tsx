@@ -95,7 +95,7 @@ export default function FilterPanel({
     linkerType: (url.get("linkerType") || "").split(",").filter(Boolean),
   };
 
-  // 点击某个筛选值时，在地址栏里对应 param 的逗号列表中增删
+  // 点击某个筛选值时，在地址栏里对应param的逗号列表中增删
   const handlePick = useCallback((param: string, val: string) => {
     const q = new URLSearchParams(window.location.search);
     const list = q.get(param)?.split(",").filter(Boolean) || [];

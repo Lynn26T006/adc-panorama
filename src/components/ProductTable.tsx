@@ -17,7 +17,7 @@ type TableProps = {
   items: ADCProduct[];
 };
 
-// 超长文字截断组件，带 title 悬浮全称
+// 超长文字截断组件，带title悬浮全称
 function EllipsisText({ raw, cap = 20 }: { raw: string; cap?: number }) {
   if (!raw || raw === "未公开") return <span className="text-cyber-text2/40 text-xs">-</span>;
   const short = raw.length > cap ? raw.slice(0, cap) + "…" : raw;
@@ -58,7 +58,7 @@ export default function ProductTable({ items }: TableProps) {
                 <div className="text-[10px] text-cyber-text2/50 mt-0.5 truncate">{drug.genericNameEn}</div>
               </td>
 
-              {/* 靶点 — 可点击跳转筛选 */}
+              {/* 靶点，可点击跳转筛选 */}
               <td className="py-3 px-3">
                 {drug.target ? (
                   <Link
@@ -73,7 +73,7 @@ export default function ProductTable({ items }: TableProps) {
                 )}
               </td>
 
-              {/* 适应症 — 最多展示2个 */}
+              {/* 适应症，最多展示2个 */}
               <td className="py-3 px-3 hidden md:table-cell">
                 <div className="flex flex-wrap gap-1">
                   {drug.indication.slice(0, 2).map((ind) => (
@@ -102,7 +102,7 @@ export default function ProductTable({ items }: TableProps) {
                 </Link>
               </td>
 
-              {/* 公司 — 大屏才显示 */}
+              {/* 公司，大屏才显示 */}
               <td className="py-3 px-3 hidden lg:table-cell">
                 {drug.companyOriginator ? (
                   <Link
@@ -117,7 +117,7 @@ export default function ProductTable({ items }: TableProps) {
                 )}
               </td>
 
-              {/* 偶联方式 — 超大屏才显示 */}
+              {/* 偶联方式，超大屏才显示 */}
               <td className="py-3 px-3 hidden xl:table-cell">
                 {drug.conjugationMethod ? (
                   <Link

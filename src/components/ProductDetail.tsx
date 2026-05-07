@@ -8,7 +8,7 @@ interface Props {
   product: ADCProduct;
 }
 
-// 通用区块容器 — 带标题和发光边框
+// 通用区块容器，带标题和发光边框
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="cyber-card p-5 space-y-3">
