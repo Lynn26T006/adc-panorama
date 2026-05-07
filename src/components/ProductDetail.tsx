@@ -8,6 +8,7 @@ interface Props {
   product: ADCProduct;
 }
 
+// 通用区块容器 — 带标题和发光边框
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="cyber-card p-5 space-y-3">
@@ -17,6 +18,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// 标签-内容行，左侧固定宽度标签，右侧自适应
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
@@ -29,7 +31,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export default function ProductDetail({ product: p }: Props) {
   return (
     <div className="space-y-5">
-      {/* Header */}
+      {/* 顶部标题区：商品名 + 通用名 + 阶段 + 批准年份 + 批准地区 */}
       <div className="cyber-card p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
@@ -80,7 +82,7 @@ export default function ProductDetail({ product: p }: Props) {
         )}
       </Section>
 
-      {/* Payload & Linker */}
+      {/* 载荷 + 连接子：名称、类型、机制、SMILES、结构式图 */}
       <Section title="载荷 & 连接子">
         <Row label="载荷名称">
           <span className="text-sm text-cyber-text font-mono">{p.payloadName}</span>
@@ -112,7 +114,7 @@ export default function ProductDetail({ product: p }: Props) {
         </Row>
       </Section>
 
-      {/* Conjugation */}
+      {/* 偶联工艺：偶联方式、位点、化学、DAR 等 */}
       <Section title="偶联工艺">
         <Row label="偶联方式">
           <ClickableField value={p.conjugationMethod} href={`/products?conjugationMethod=${encodeURIComponent(p.conjugationMethod)}`} color="purple" />

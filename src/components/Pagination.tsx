@@ -8,56 +8,56 @@ interface Props {
 }
 
 export default function Pagination({ totalPages, currentPage }: Props) {
-  const [inputPage, setInputPage] = useState("");
+  const [goTo, setGoTo] = useState("");
   if (totalPages <= 1) return null;
 
-  function pageHref(page: number) {
-    const sp = new URLSearchParams(window.location.search);
-    sp.set("page", String(page));
-    return `/products?${sp.toString()}`;
+  function linkToPage(n: number) {
+    const q = new URLSearchParams(window.location.search);
+    q.set("page", String(n));
+    return `/products?${q.toString()}`;
   }
 
-  function handleJump() {
-    const p = parseInt(inputPage);
-    if (p >= 1 && p <= totalPages) {
-      window.location.href = pageHref(p);
+  function doJump() {
+    const target = parseInt(goTo);
+    if (target >= 1 && target <= totalPages) {
+      window.location.href = linkToPage(target);
     }
   }
 
-  const pages: (number | "...")[] = [];
-  const range = 2;
-  for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= currentPage - range && i <= currentPage + range)) {
-      pages.push(i);
-    } else if (pages[pages.length - 1] !== "...") {
-      pages.push("...");
+  const pageList: (number | "...")[] = [];
+  const wing = 2;
+  for (let idx = 1; idx <= totalPages; idx++) {
+    if (idx === 1 || idx === totalPages || (idx >= currentPage - wing && idx <= currentPage + wing)) {
+      pageList.push(idx);
+    } else if (pageList[pageList.length - 1] !== "...") {
+      pageList.push("...");
     }
   }
 
   return (
     <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
       {currentPage > 1 && (
-        <a href={pageHref(currentPage - 1)}
+        <a href={linkToPage(currentPage - 1)}
           className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline">
           上一页
         </a>
       )}
-      {pages.map((p, i) =>
-        p === "..." ? (
-          <span key={`dots-${i}`} className="px-2 text-cyber-text2/50">...</span>
+      {pageList.map((item, k) =>
+        item === "..." ? (
+          <span key={`dots-${k}`} className="px-2 text-cyber-text2/50">...</span>
         ) : (
-          <a key={p} href={pageHref(p)}
+          <a key={item} href={linkToPage(item)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all no-underline ${
-              p === currentPage
+              item === currentPage
                 ? "bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/50 glow-text"
                 : "text-cyber-text2 border border-transparent hover:border-cyber-border hover:text-cyber-text"
             }`}>
-            {p}
+            {item}
           </a>
         )
       )}
       {currentPage < totalPages && (
-        <a href={pageHref(currentPage + 1)}
+        <a href={linkToPage(currentPage + 1)}
           className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline">
           下一页
         </a>
@@ -69,14 +69,14 @@ export default function Pagination({ totalPages, currentPage }: Props) {
             type="number"
             min={1}
             max={totalPages}
-            value={inputPage}
-            onChange={(e) => setInputPage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleJump()}
+            value={goTo}
+            onChange={(e) => setGoTo(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && doJump()}
             placeholder={String(currentPage)}
             className="w-16 px-2 py-1 rounded-md bg-cyber-bg border border-cyber-border text-cyber-text text-sm text-center focus:outline-none focus:border-cyber-accent"
           />
           / {totalPages} 页
-          <button onClick={handleJump}
+          <button onClick={doJump}
             className="px-2 py-1 rounded-md text-xs border border-cyber-border text-cyber-text2 hover:text-cyber-accent hover:border-cyber-accent transition-all">
             GO
           </button>

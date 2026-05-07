@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
-  const pathname = usePathname();
+  const route = usePathname();
 
-  const links = [
+  const tabs = [
     { href: "/", label: "首页" },
     { href: "/products", label: "产品列表" },
     { href: "/visualize", label: "可视化图谱" },
@@ -22,19 +22,22 @@ export default function Navbar() {
             </span>
           </Link>
           <div className="flex items-center gap-1">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 no-underline ${
-                  pathname === l.href
-                    ? "bg-cyber-accent/15 text-cyber-accent glow-text"
-                    : "text-cyber-text2 hover:text-cyber-text hover:bg-white/5"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
+            {tabs.map((t) => {
+              const isActive = route === t.href;
+              return (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 no-underline ${
+                    isActive
+                      ? "bg-cyber-accent/15 text-cyber-accent glow-text"
+                      : "text-cyber-text2 hover:text-cyber-text hover:bg-white/5"
+                  }`}
+                >
+                  {t.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 
-interface Props {
+type FieldProps = {
   value: string;
   href?: string;
   external?: boolean;
   className?: string;
   badge?: boolean;
   color?: "accent" | "green" | "pink" | "orange" | "purple" | "default";
-}
+};
 
-const colorMap = {
+// 每个颜色对应一套 cyber 风格的边框和文字样式
+const palette = {
   accent: "border-cyber-accent/50 text-cyber-accent hover:border-cyber-accent hover:text-cyber-accent",
   green: "border-cyber-green/50 text-cyber-green hover:border-cyber-green hover:text-cyber-green",
   pink: "border-cyber-pink/50 text-cyber-pink hover:border-cyber-pink hover:text-cyber-pink",
@@ -27,22 +28,24 @@ export default function ClickableField({
   className = "",
   badge = true,
   color = "default",
-}: Props) {
+}: FieldProps) {
+  // 没有实质内容就直接显示灰色占位符
   if (!value || value === "未公开" || value === "-" || value === "") {
     return <span className="text-cyber-text2/50 text-sm">{value || "-"}</span>;
   }
 
-  const baseStyle = badge
-    ? `cyber-badge ${colorMap[color]}`
-    : `text-sm transition-all duration-200 cursor-pointer hover:text-cyber-accent hover:underline decoration-cyber-accent/50 underline-offset-4 ${colorMap[color]}`;
+  const style = badge
+    ? `cyber-badge ${palette[color]}`
+    : `text-sm transition-all duration-200 cursor-pointer hover:text-cyber-accent hover:underline decoration-cyber-accent/50 underline-offset-4 ${palette[color]}`;
 
+  // 外链场景 — 新标签页打开，带个小箭头图标
   if (external && href) {
     return (
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${baseStyle} ${className}`}
+        className={`${style} ${className}`}
       >
         {value}
         <svg className="w-3 h-3 ml-1 inline opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -52,13 +55,15 @@ export default function ClickableField({
     );
   }
 
+  // 内部路由跳转
   if (href) {
     return (
-      <Link href={href} className={`${baseStyle} ${className}`}>
+      <Link href={href} className={`${style} ${className}`}>
         {value}
       </Link>
     );
   }
 
-  return <span className={`${baseStyle} ${className} cursor-default`}>{value}</span>;
+  // 纯文本展示，不可点击
+  return <span className={`${style} ${className} cursor-default`}>{value}</span>;
 }

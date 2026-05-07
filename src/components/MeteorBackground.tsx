@@ -1,25 +1,36 @@
 "use client";
 
+const STAR_COUNT = 8;
+
+function makeMeteor(idx: number) {
+  const x = Math.random() * 100;
+  const y = Math.random() * 100;
+  return {
+    id: idx,
+    posX: `${x}%`,
+    posY: `${y}%`,
+    animDelay: `${Math.random() * 8}s`,
+    animSpeed: `${2 + Math.random() * 3}s`,
+  };
+}
+
 export default function MeteorBackground() {
-  const meteors = Array.from({ length: 8 }, (_, i) => ({
-    id: i,
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    delay: `${Math.random() * 8}s`,
-    duration: `${2 + Math.random() * 3}s`,
-  }));
+  const items = [];
+  for (let i = 0; i < STAR_COUNT; i++) {
+    items.push(makeMeteor(i));
+  }
 
   return (
     <div className="meteor-container">
-      {meteors.map((m) => (
+      {items.map((it) => (
         <span
-          key={m.id}
+          key={it.id}
           className="meteor"
           style={{
-            left: m.left,
-            top: m.top,
-            animationDelay: m.delay,
-            animationDuration: m.duration,
+            left: it.posX,
+            top: it.posY,
+            animationDelay: it.animDelay,
+            animationDuration: it.animSpeed,
           }}
         />
       ))}

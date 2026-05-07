@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ADCProduct } from "@/lib/types";
 
-const stageColors: Record<string, string> = {
+const stageBadgeClr: Record<string, string> = {
   "已上市": "border-cyber-green/50 text-cyber-green",
   "NDA": "border-cyber-orange/50 text-cyber-orange",
   "临床III期": "border-cyber-accent/50 text-cyber-accent",
@@ -12,29 +12,32 @@ const stageColors: Record<string, string> = {
   "IND": "border-cyber-pink/50 text-cyber-pink",
 };
 
-interface Props {
-  product: ADCProduct;
-}
+type CardProps = {
+  drug: ADCProduct;
+};
 
-export default function ProductCard({ product: p }: Props) {
+export default function ProductCard({ drug }: CardProps) {
+  const stageStyle = stageBadgeClr[drug.stage] || "";
+
   return (
-    <Link href={`/products/${p.id}`} className="cyber-card p-4 block no-underline group">
+    <Link href={`/products/${drug.id}`} className="cyber-card p-4 block no-underline group">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <div className="font-bold text-cyber-text group-hover:text-cyber-accent transition-colors">{p.brandName}</div>
-          <div className="text-xs text-cyber-text2/60 mt-0.5">{p.genericNameEn}</div>
+          <div className="font-bold text-cyber-text group-hover:text-cyber-accent transition-colors">{drug.brandName}</div>
+          <div className="text-xs text-cyber-text2/60 mt-0.5">{drug.genericNameEn}</div>
         </div>
-        <span className={`cyber-badge text-xs ${stageColors[p.stage] || ""}`}>{p.stage}</span>
+        <span className={`cyber-badge text-xs ${stageStyle}`}>{drug.stage}</span>
       </div>
+      {/* 靶点 + 适应症 badge 行 */}
       <div className="flex flex-wrap gap-1.5 mt-2">
         <Link
-          href={`/products?target=${encodeURIComponent(p.target)}`}
+          href={`/products?target=${encodeURIComponent(drug.target)}`}
           className="cyber-badge border-cyber-pink/50 text-cyber-pink text-xs"
           onClick={(e) => e.stopPropagation()}
         >
-          {p.target}
+          {drug.target}
         </Link>
-        {p.indication.slice(0, 2).map((ind) => (
+        {drug.indication.slice(0, 2).map((ind) => (
           <Link
             key={ind}
             href={`/products?indication=${encodeURIComponent(ind)}`}
@@ -44,25 +47,26 @@ export default function ProductCard({ product: p }: Props) {
             {ind}
           </Link>
         ))}
-        {p.indication.length > 2 && (
-          <span className="text-xs text-cyber-text2/50 self-center">+{p.indication.length - 2}</span>
+        {drug.indication.length > 2 && (
+          <span className="text-xs text-cyber-text2/50 self-center">+{drug.indication.length - 2}</span>
         )}
       </div>
+      {/* 公司 + 偶联方式 */}
       <div className="mt-3 flex items-center gap-3 text-xs text-cyber-text2">
         <Link
-          href={`/products?company=${encodeURIComponent(p.companyOriginator)}`}
+          href={`/products?company=${encodeURIComponent(drug.companyOriginator)}`}
           className="hover:text-cyber-accent transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          {p.companyOriginator}
+          {drug.companyOriginator}
         </Link>
         <span>·</span>
         <Link
-          href={`/products?conjugationMethod=${encodeURIComponent(p.conjugationMethod)}`}
+          href={`/products?conjugationMethod=${encodeURIComponent(drug.conjugationMethod)}`}
           className="hover:text-cyber-accent transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          {p.conjugationMethod}
+          {drug.conjugationMethod}
         </Link>
       </div>
     </Link>

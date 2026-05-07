@@ -116,11 +116,11 @@ export default function ProductsPage() {
 
           <div className="flex-1 min-w-0">
             <div className="hidden md:block cyber-card overflow-hidden">
-              <ProductTable products={products} />
+              <ProductTable items={products} />
             </div>
             <div className="md:hidden space-y-3">
               {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <ProductCard key={p.id} drug={p} />
               ))}
             </div>
             {products.length === 0 && (
