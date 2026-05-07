@@ -52,15 +52,20 @@ export interface ADCProduct {
 
   // Cell line & sequence
   cellLine: string;
-  antibodySequence: string;
+  antibodySequenceHeavy: string;
+  antibodySequenceLight: string;
   signalPeptide: string;
   plasmidInfo: string;
 
   // Payload chemistry
   payloadSmiles: string;
+  payloadStructure: string;
 
   // PDB
   pdbId: string;
+
+  // Manufacturer
+  manufacturer: string;
 
   // Patent & references
   patentNumber: string;

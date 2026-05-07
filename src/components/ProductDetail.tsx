@@ -96,6 +96,11 @@ export default function ProductDetail({ product: p }: Props) {
             <span className="text-xs text-cyber-text2 font-mono bg-cyber-bg/50 px-2 py-1 rounded break-all">{p.payloadSmiles}</span>
           </Row>
         )}
+        {p.payloadStructure && (
+          <Row label="结构式">
+            <img src={p.payloadStructure} alt="Payload structure" className="max-w-full max-h-48 rounded-lg border border-cyber-border/50 bg-white/10 p-1" />
+          </Row>
+        )}
         <Row label="连接子">
           <span className="text-sm text-cyber-text font-mono">{p.linkerName}</span>
         </Row>
@@ -134,6 +139,11 @@ export default function ProductDetail({ product: p }: Props) {
         <Row label="剂型">
           <span className="text-sm text-cyber-text font-bold">{p.dosageForm}</span>
         </Row>
+        {p.manufacturer && (
+          <Row label="生产厂家">
+            <span className="text-sm text-cyber-text">{p.manufacturer}</span>
+          </Row>
+        )}
         <Row label="冻干">
           <span className={`text-sm font-bold ${p.lyophilization ? "text-cyber-accent" : "text-cyber-orange"}`}>
             {p.lyophilization ? "是" : "否"}
@@ -227,16 +237,21 @@ export default function ProductDetail({ product: p }: Props) {
       )}
 
       {/* Cell line & sequence */}
-      {(p.cellLine || p.antibodySequence || p.signalPeptide || p.plasmidInfo) && (
+      {(p.cellLine || p.antibodySequenceHeavy || p.antibodySequenceLight || p.signalPeptide || p.plasmidInfo) && (
         <Section title="细胞株 & 序列">
           {p.cellLine && (
             <Row label="细胞类型">
               <span className="text-sm text-cyber-text">{p.cellLine}</span>
             </Row>
           )}
-          {p.antibodySequence && (
-            <Row label="抗体序列">
-              <span className="text-xs text-cyber-text2 font-mono bg-cyber-bg/50 px-2 py-1 rounded break-all max-h-24 overflow-y-auto">{p.antibodySequence}</span>
+          {p.antibodySequenceHeavy && (
+            <Row label="重链序列">
+              <span className="text-xs text-cyber-text2 font-mono bg-cyber-bg/50 px-2 py-1 rounded break-all max-h-24 overflow-y-auto block">{p.antibodySequenceHeavy}</span>
+            </Row>
+          )}
+          {p.antibodySequenceLight && (
+            <Row label="轻链序列">
+              <span className="text-xs text-cyber-text2 font-mono bg-cyber-bg/50 px-2 py-1 rounded break-all max-h-24 overflow-y-auto block">{p.antibodySequenceLight}</span>
             </Row>
           )}
           {p.signalPeptide && (
