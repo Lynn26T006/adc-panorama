@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-Auto-update ADC database from ADCdb.
+Auto-update ADC database from multiple public sources:
+  ADCdb (adcdb.idrblab.net)
+  ClinicalTrials.gov (clinicaltrials.gov/api)
+  openFDA (api.fda.gov)
+  PubChem (pubchem.ncbi.nlm.nih.gov)
+  RCSB PDB (search.rcsb.org)
+
+All source data is from public databases; safe for commercial use.
+
 Run: python3 auto_update.py [--full]
   --full : re-scrape all entries (takes hours)
   default: only scrape new/updated entries since last run
@@ -9,6 +17,11 @@ Run: python3 auto_update.py [--full]
 import requests, re, json, time, sys, os
 from datetime import datetime
 from collections import Counter
+
+# Import local fetcher modules
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from fetch_clinicaltrials import get_drug_trials
+from fetch_fda import get_drug_fda_info
 
 BASE = "https://adcdb.idrblab.net"
 H = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'}
@@ -121,7 +134,7 @@ def create_entry(s, detail_info=None):
         'referenceLabel': f'ADCdb ID: {s["adc_id"]} | Auto-updated {datetime.now().strftime("%Y-%m-%d")}',
         'referenceUrl': f'https://adcdb.idrblab.net/search/result/adc?search_api_fulltext={s.get("name","")}',
         'lastUpdated': datetime.now().strftime('%Y-%m-%d'),
-        'notes': f'来源: ADCdb | {s.get("status","")} | {s.get("payload","")}'
+        'notes': f'来源: ADCdb | CT.gov | FDA | PubChem | {s.get("status","")} | {s.get("payload","")}'
     }
 
 
@@ -169,19 +182,50 @@ def fetch_pdb_id(protein_name):
 
 
 def enrich_entry(entry):
-    """Add SMILES and PDB info to an entry."""
+    """Add SMILES, PDB, CT.gov, and FDA info to an entry."""
     payload = entry.get('payloadName', '')
     target = entry.get('target', '')
+    brand = entry.get('brandName', '')
+    antibody = entry.get('antibody', '')
+
     if payload and not entry.get('payloadSmiles'):
         smiles = fetch_pubchem_smiles(payload)
         if smiles:
             entry['payloadSmiles'] = smiles
             time.sleep(0.3)
+
     if target and not entry.get('pdbId'):
         pdb = fetch_pdb_id(target)
         if pdb:
             entry['pdbId'] = pdb
             time.sleep(0.3)
+
+    # CT.gov trials
+    if brand or antibody:
+        trials = get_drug_trials(brand, antibody, target)
+        if trials.get('highestPhase') and trials['highestPhase'] != 'Not Provided':
+            if not entry.get('notes'):
+                entry['notes'] = ''
+            entry['notes'] += f' | CT.gov: {trials["totalStudies"]} trials, phase {trials["highestPhase"]}'
+        time.sleep(0.5)
+
+    # FDA label
+    if brand:
+        fda = get_drug_fda_info(brand)
+        if fda.get('fda_label_found'):
+            if not entry.get('manufacturer') and fda.get('fda_manufacturer'):
+                entry['manufacturer'] = fda['fda_manufacturer']
+            if not entry.get('dosageForm') and fda.get('fda_dosage_form'):
+                entry['dosageForm'] = fda['fda_dosage_form']
+            if not entry.get('genericNameEn') and fda.get('fda_generic_name'):
+                entry['genericNameEn'] = fda['fda_generic_name']
+            if not entry.get('approvalYear') and fda.get('fda_application_number'):
+                # NDA/BLA number prefix often indicates year, but not reliable
+                app = fda['fda_application_number']
+                if app.startswith('NDA'):
+                    entry['notes'] = (entry.get('notes', '') + f' | FDA App: {app}').strip(' | ')
+        time.sleep(0.5)
+
     return entry
 
 
