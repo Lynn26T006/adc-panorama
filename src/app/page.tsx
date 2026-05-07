@@ -141,19 +141,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="border-t border-cyber-border py-8">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-sm font-bold gradient-text mb-2">BioDlink</p>
-            <p className="text-xs text-cyber-text2/60">
-              数据来源：FDA Drugs@FDA · EMA EPAR · PMDA 審査報告書 · NMPA/CDE · ClinicalTrials.gov · Google Patents · PubMed
-            </p>
-            <p className="text-xs text-cyber-text2/40 mt-1">
-              © {new Date().getFullYear()} BioDlink · 由 <span className="text-cyber-accent/70">Lynn</span> 创建维护 · 数据持续更新中
-            </p>
-          </div>
-        </footer>
-
       </main>
     </>
   );

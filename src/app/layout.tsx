@@ -20,7 +20,20 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-cyber-bg text-cyber-text relative">
         <MeteorBackground />
-        {children}
+        <div className="flex-1">{children}</div>
+        <footer className="border-t border-cyber-border py-6">
+          <div className="max-w-6xl mx-auto px-4 text-center space-y-1.5">
+            <p className="text-xs text-cyber-text2/50">
+              数据来源：FDA Drugs@FDA · EMA EPAR · PMDA · NMPA/CDE · ClinicalTrials.gov · Google Patents · PubMed · ADCdb · PubChem · RCSB PDB
+            </p>
+            <p className="text-[10px] text-cyber-text2/30 max-w-2xl mx-auto leading-relaxed">
+              免责声明：本数据库内容仅供参考和学术研究使用，不构成任何医学建议、诊断或治疗推荐。用药决策请咨询专业医师。数据来源于公开数据库，BioDlink 不对其准确性、完整性做任何保证。
+            </p>
+            <p className="text-[10px] text-cyber-text2/30">
+              © {new Date().getFullYear()} BioDlink · 保留所有权利
+            </p>
+          </div>
+        </footer>
       </body>
     </html>
   );
