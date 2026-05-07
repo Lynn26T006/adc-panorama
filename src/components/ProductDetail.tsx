@@ -91,6 +91,11 @@ export default function ProductDetail({ product: p }: Props) {
         <Row label="作用机制">
           <span className="text-sm text-cyber-text2">{p.payloadMechanism}</span>
         </Row>
+        {p.payloadSmiles && (
+          <Row label="SMILES">
+            <span className="text-xs text-cyber-text2 font-mono bg-cyber-bg/50 px-2 py-1 rounded break-all">{p.payloadSmiles}</span>
+          </Row>
+        )}
         <Row label="连接子">
           <span className="text-sm text-cyber-text font-mono">{p.linkerName}</span>
         </Row>
@@ -218,6 +223,48 @@ export default function ProductDetail({ product: p }: Props) {
               <span className="text-sm text-cyber-text2">{p.potencyMethod}</span>
             </Row>
           )}
+        </Section>
+      )}
+
+      {/* Cell line & sequence */}
+      {(p.cellLine || p.antibodySequence || p.signalPeptide || p.plasmidInfo) && (
+        <Section title="细胞株 & 序列">
+          {p.cellLine && (
+            <Row label="细胞类型">
+              <span className="text-sm text-cyber-text">{p.cellLine}</span>
+            </Row>
+          )}
+          {p.antibodySequence && (
+            <Row label="抗体序列">
+              <span className="text-xs text-cyber-text2 font-mono bg-cyber-bg/50 px-2 py-1 rounded break-all max-h-24 overflow-y-auto">{p.antibodySequence}</span>
+            </Row>
+          )}
+          {p.signalPeptide && (
+            <Row label="信号肽">
+              <span className="text-sm text-cyber-text font-mono">{p.signalPeptide}</span>
+            </Row>
+          )}
+          {p.plasmidInfo && (
+            <Row label="质粒信息">
+              <span className="text-sm text-cyber-text2">{p.plasmidInfo}</span>
+            </Row>
+          )}
+        </Section>
+      )}
+
+      {/* PDB */}
+      {p.pdbId && (
+        <Section title="PDB 结构">
+          <Row label="PDB 编号">
+            <a
+              href={`https://www.rcsb.org/structure/${p.pdbId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-cyber-accent hover:underline font-mono"
+            >
+              {p.pdbId}
+            </a>
+          </Row>
         </Section>
       )}
 

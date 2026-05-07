@@ -296,6 +296,9 @@ export default function ForceGraph({ products }: Props) {
             {selected.indication?.[0] && selected.indication[0] !== '未公开' && (
               <div><span className="text-cyber-text2/60">适应症:</span> <span className="text-cyber-green">{selected.indication.slice(0,3).join('; ')}</span></div>
             )}
+            {selected.cellLine && <div><span className="text-cyber-text2/60">细胞:</span> <span className="text-cyber-text">{selected.cellLine}</span></div>}
+            {selected.payloadSmiles && <div><span className="text-cyber-text2/60">SMILES:</span> <span className="text-cyber-text text-[10px] font-mono break-all">{selected.payloadSmiles}</span></div>}
+            {selected.pdbId && <div><span className="text-cyber-text2/60">PDB:</span> <a href={`https://www.rcsb.org/structure/${selected.pdbId}`} target="_blank" rel="noopener noreferrer" className="text-cyber-accent font-mono hover:underline">{selected.pdbId}</a></div>}
             {selected.referenceLabel && (
               <div><span className="text-cyber-text2/60">来源:</span> <span className="text-cyber-text2/50 text-[10px]">{selected.referenceLabel}</span></div>
             )}

@@ -113,12 +113,74 @@ def create_entry(s, detail_info=None):
         'liquidExcipients': '', 'storageCondition': '', 'shelfLife': '',
         'containerClosure': '', 'purityMethod': '', 'potencyMethod': '',
         'criticalQualityAttrs': '',
+        'cellLine': '', 'antibodySequence': '', 'signalPeptide': '', 'plasmidInfo': '',
+        'payloadSmiles': '', 'pdbId': '',
         'patentNumber': '', 'patentTitle': '', 'patentAssignee': '', 'patentFilingDate': '',
         'referenceLabel': f'ADCdb ID: {s["adc_id"]} | Auto-updated {datetime.now().strftime("%Y-%m-%d")}',
         'referenceUrl': f'https://adcdb.idrblab.net/search/result/adc?search_api_fulltext={s.get("name","")}',
         'lastUpdated': datetime.now().strftime('%Y-%m-%d'),
         'notes': f'来源: ADCdb | {s.get("status","")} | {s.get("payload","")}'
     }
+
+
+def fetch_pubchem_smiles(compound_name):
+    """Try to get SMILES from PubChem by compound name."""
+    try:
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{compound_name}/property/CanonicalSMILES/JSON"
+        resp = requests.get(url, headers=H, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            props = data.get('PropertyTable', {}).get('Properties', [])
+            if props and props[0].get('CanonicalSMILES'):
+                return props[0]['CanonicalSMILES']
+    except:
+        pass
+    return ''
+
+
+def fetch_pdb_id(protein_name):
+    """Try to get PDB ID for a protein/antibody target."""
+    try:
+        url = f"https://search.rcsb.org/rcsbsearch/v2/query"
+        query = {
+            "query": {
+                "type": "terminal",
+                "service": "text",
+                "parameters": {
+                    "attribute": "rcsb_entity_source_organism.taxonomy_lineage.name",
+                    "operator": "contains_phrase",
+                    "value": protein_name
+                }
+            },
+            "return_type": "entry",
+            "request_options": {"results_verbosity": "compact", "results_content_type": ["experimental"]}
+        }
+        resp = requests.post(url, json=query, headers={**H, 'Content-Type': 'application/json'}, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            ids = data.get('result_set', [])
+            if ids:
+                return ids[0].get('identifier', '')
+    except:
+        pass
+    return ''
+
+
+def enrich_entry(entry):
+    """Add SMILES and PDB info to an entry."""
+    payload = entry.get('payloadName', '')
+    target = entry.get('target', '')
+    if payload and not entry.get('payloadSmiles'):
+        smiles = fetch_pubchem_smiles(payload)
+        if smiles:
+            entry['payloadSmiles'] = smiles
+            time.sleep(0.3)
+    if target and not entry.get('pdbId'):
+        pdb = fetch_pdb_id(target)
+        if pdb:
+            entry['pdbId'] = pdb
+            time.sleep(0.3)
+    return entry
 
 
 def main():
@@ -153,7 +215,10 @@ def main():
                     if s.get('status') in {'Approved', 'Phase 3', 'Phase 2', 'Phase 1'}:
                         detail = fetch_detail(s['adc_id'])
                         time.sleep(0.2)
-                    new_entries.append(create_entry(s, detail))
+                    entry = create_entry(s, detail)
+                    if s.get('status') in {'Approved', 'Phase 3'}:
+                        entry = enrich_entry(entry)
+                    new_entries.append(entry)
                     q_new += 1
                 elif full_mode and s.get('status') in {'Approved', 'Phase 3', 'Phase 2', 'Phase 1'}:
                     # Update existing clinical entry with detail info

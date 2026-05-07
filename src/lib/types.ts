@@ -50,6 +50,18 @@ export interface ADCProduct {
   potencyMethod: string;
   criticalQualityAttrs: string;
 
+  // Cell line & sequence
+  cellLine: string;
+  antibodySequence: string;
+  signalPeptide: string;
+  plasmidInfo: string;
+
+  // Payload chemistry
+  payloadSmiles: string;
+
+  // PDB
+  pdbId: string;
+
   // Patent & references
   patentNumber: string;
   patentTitle: string;
