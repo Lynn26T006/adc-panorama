@@ -15,20 +15,22 @@ interface Props {
   targetCount: number;
   approvedCount: number;
   indCount: number;
+  clinicalCount: number;
   companyCount: number;
 }
 
-export default function StatsCards({ drugCount, targetCount, approvedCount, indCount, companyCount }: Props) {
+export default function StatsCards({ drugCount, targetCount, approvedCount, indCount, clinicalCount, companyCount }: Props) {
   const stats: Stat[] = [
     { label: "ADC 产品", value: drugCount, unit: "款", href: "/products", color: "from-cyber-accent to-cyan-400" },
     { label: "已上市", value: approvedCount, unit: "款", href: "/products?stage=已上市", color: "from-cyber-green to-green-300" },
     { label: "IND 阶段", value: indCount, unit: "款", href: "/products?stage=IND", color: "from-cyber-pink to-pink-300" },
+    { label: "临床阶段", value: clinicalCount, unit: "款", href: "/products?stage=临床III期", color: "from-[#00e5ff] to-cyan-300" },
     { label: "靶点", value: targetCount, unit: "个", href: "/products?sort=target", color: "from-cyber-orange to-yellow-300" },
     { label: "开发公司", value: companyCount, unit: "家", href: "/products?sort=companyOriginator", color: "from-cyber-accent2 to-violet-300" },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {stats.map((s) => (
         <Link
           key={s.label}

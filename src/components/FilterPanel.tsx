@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 interface FilterGroupProps {
   label: string;
@@ -11,13 +10,22 @@ interface FilterGroupProps {
   onToggle: (param: string, value: string) => void;
 }
 
+const INITIAL_SHOW = 8;
+
 function FilterGroup({ label, param, options, selected, onToggle }: FilterGroupProps) {
+  const [expanded, setExpanded] = useState(false);
   if (options.length === 0) return null;
+  const hasMore = options.length > INITIAL_SHOW;
+  const visible = expanded ? options : options.slice(0, INITIAL_SHOW);
+
   return (
     <div>
-      <div className="text-xs font-semibold text-cyber-text2/70 uppercase tracking-wider mb-2">{label}</div>
+      <div className="text-xs font-semibold text-cyber-text2/70 uppercase tracking-wider mb-2">
+        {label}
+        {hasMore && <span className="text-cyber-text2/40 ml-1">({options.length})</span>}
+      </div>
       <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => {
+        {visible.map((opt) => {
           const isActive = selected.includes(opt);
           return (
             <button
@@ -33,9 +41,30 @@ function FilterGroup({ label, param, options, selected, onToggle }: FilterGroupP
             </button>
           );
         })}
+        {hasMore && !expanded && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-xs px-2.5 py-1 rounded-full border border-cyber-border/30 text-cyber-accent/60 hover:text-cyber-accent hover:border-cyber-accent/50 transition-all"
+          >
+            +{options.length - INITIAL_SHOW} 更多
+          </button>
+        )}
+        {hasMore && expanded && (
+          <button
+            onClick={() => setExpanded(false)}
+            className="text-xs px-2.5 py-1 rounded-full border border-cyber-border/30 text-cyber-text2/50 hover:text-cyber-text2 transition-all"
+          >
+            收起
+          </button>
+        )}
       </div>
     </div>
   );
+}
+
+function getSearchParams(): URLSearchParams {
+  if (typeof window === "undefined") return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
 }
 
 interface Props {
@@ -55,33 +84,28 @@ export default function FilterPanel({
   payloadClasses,
   linkerTypes,
 }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
+  const sp = getSearchParams();
   const currentFilters = {
-    stage: (searchParams.get("stage") || "").split(",").filter(Boolean),
-    target: (searchParams.get("target") || "").split(",").filter(Boolean),
-    indication: (searchParams.get("indication") || "").split(",").filter(Boolean),
-    conjugationMethod: (searchParams.get("conjugationMethod") || "").split(",").filter(Boolean),
-    payloadClass: (searchParams.get("payloadClass") || "").split(",").filter(Boolean),
-    linkerType: (searchParams.get("linkerType") || "").split(",").filter(Boolean),
+    stage: (sp.get("stage") || "").split(",").filter(Boolean),
+    target: (sp.get("target") || "").split(",").filter(Boolean),
+    indication: (sp.get("indication") || "").split(",").filter(Boolean),
+    conjugationMethod: (sp.get("conjugationMethod") || "").split(",").filter(Boolean),
+    payloadClass: (sp.get("payloadClass") || "").split(",").filter(Boolean),
+    linkerType: (sp.get("linkerType") || "").split(",").filter(Boolean),
   };
 
-  const onToggle = useCallback(
-    (param: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      const key = param as keyof typeof currentFilters;
-      const current = [...currentFilters[key]];
-      const idx = current.indexOf(value);
-      if (idx >= 0) current.splice(idx, 1);
-      else current.push(value);
-      if (current.length > 0) params.set(param, current.join(","));
-      else params.delete(param);
-      params.delete("page");
-      router.push(`/products?${params.toString()}`);
-    },
-    [searchParams, router, currentFilters]
-  );
+  const onToggle = useCallback((param: string, value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    const key = param as keyof typeof currentFilters;
+    const current = params.get(param)?.split(",").filter(Boolean) || [];
+    const idx = current.indexOf(value);
+    if (idx >= 0) current.splice(idx, 1);
+    else current.push(value);
+    if (current.length > 0) params.set(param, current.join(","));
+    else params.delete(param);
+    params.delete("page");
+    window.location.href = `/products?${params.toString()}`;
+  }, []);
 
   const hasAnyFilters = Object.values(currentFilters).some((arr) => arr.length > 0);
 
@@ -91,7 +115,7 @@ export default function FilterPanel({
         <span className="text-sm font-bold text-cyber-text">筛选器</span>
         {hasAnyFilters && (
           <button
-            onClick={() => router.push("/products")}
+            onClick={() => { window.location.href = "/products"; }}
             className="text-xs text-cyber-pink hover:text-cyber-pink/80 transition-colors"
           >
             清除全部

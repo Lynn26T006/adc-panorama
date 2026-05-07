@@ -6,6 +6,7 @@ import StatsCards from "@/components/StatsCards";
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
 import ClickableField from "@/components/ClickableField";
+import ForceGraph from "@/components/ForceGraph";
 
 export const metadata: Metadata = {
   title: "ADC Panorama — 全球ADC药物全景图谱",
@@ -16,6 +17,9 @@ export default function HomePage() {
   const targets = getProductTargets();
   const approved = allProducts.filter((p) => p.stage === "已上市");
   const ind = allProducts.filter((p) => p.stage === "IND");
+  const clinical = allProducts.filter((p) =>
+    ["NDA", "临床III期", "临床II期", "临床I期"].includes(p.stage)
+  );
   const companies = [...new Set(allProducts.map((p) => p.companyOriginator))];
   const topTargets = targets.slice(0, 8);
 
@@ -50,8 +54,16 @@ export default function HomePage() {
             targetCount={targets.length}
             approvedCount={approved.length}
             indCount={ind.length}
+            clinicalCount={clinical.length}
             companyCount={companies.length}
           />
+        </section>
+
+        {/* Visualization globe */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+          <div className="cyber-card overflow-hidden">
+            <ForceGraph products={allProducts} />
+          </div>
         </section>
 
         {/* Quick links */}
@@ -125,20 +137,6 @@ export default function HomePage() {
                 })}
               </div>
             </div>
-
-            {/* Visualize CTA */}
-            <Link href="/visualize" className="cyber-card p-6 relative overflow-hidden group no-underline block">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyber-accent/5 via-transparent to-cyber-accent2/5 group-hover:from-cyber-accent/10 group-hover:to-cyber-accent2/10 transition-all rounded-2xl" />
-              <div className="relative">
-                <h2 className="text-lg font-bold text-cyber-text mb-2">可视化图谱</h2>
-                <p className="text-sm text-cyber-text2 mb-4">
-                  交互式力导向图 — 直观查看 ADC 药物、靶点、公司、适应症之间的关联，点击任意节点深入探索
-                </p>
-                <span className="text-sm text-cyber-accent font-bold hover:glow-text transition-all">
-                  进入图谱 →
-                </span>
-              </div>
-            </Link>
 
           </div>
         </section>

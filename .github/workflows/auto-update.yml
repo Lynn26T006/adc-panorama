@@ -1,0 +1,37 @@
+name: Auto-update ADC Database
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run auto-update
+        run: python3 data/scripts/auto_update.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "ADC Auto-Updater"
+          git config user.email "bot@adc-panorama.biodlink"
+          git add data/adc_products.json data/update_log.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "auto: update ADC database"
+            git push
+          fi

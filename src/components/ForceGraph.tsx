@@ -1,223 +1,318 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import * as d3 from "d3";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ADCProduct } from "@/lib/types";
 
-interface GraphNode extends d3.SimulationNodeDatum {
-  id: string;
-  name: string;
-  group: "drug" | "target" | "company" | "disease";
-  product?: ADCProduct;
-}
-
-const COLORS: Record<string, string> = {
-  drug: "#00e5ff",
-  target: "#ff6ec7",
-  company: "#ffb74d",
-  disease: "#69f0ae",
+const STAGE_CONFIG: Record<string, { color: string; size: number; latRange: [number, number] }> = {
+  "已上市": { color: "#69f0ae", size: 0.035, latRange: [60, 90] },
+  "NDA": { color: "#f44336", size: 0.03, latRange: [30, 55] },
+  "临床III期": { color: "#00e5ff", size: 0.03, latRange: [5, 30] },
+  "临床II期": { color: "#b388ff", size: 0.025, latRange: [-25, 5] },
+  "临床I期": { color: "#ffb74d", size: 0.025, latRange: [-55, -25] },
+  "IND": { color: "#ff6ec7", size: 0.02, latRange: [-90, -55] },
 };
 
-const GROUP_NAMES: Record<string, string> = {
-  drug: "药物",
-  target: "靶点",
-  company: "公司",
-  disease: "适应症",
-};
-
-interface Props {
-  products: ADCProduct[];
-}
+interface Props { products: ADCProduct[]; }
 
 export default function ForceGraph({ products }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hovered, setHovered] = useState<GraphNode | null>(null);
-  const router = useRouter();
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const nodesRef = useRef<Map<THREE.Mesh, ADCProduct>>(new Map());
+  const [hovered, setHovered] = useState<ADCProduct | null>(null);
+  const [selected, setSelected] = useState<ADCProduct | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-  const buildGraph = useCallback(() => {
-    const nodes: GraphNode[] = [];
-    const nodeMap = new Map<string, GraphNode>();
-    const links: { source: string; target: string }[] = [];
+  const filtered = useMemo(
+    () => products.filter(
+      (p) => p.brandName?.length > 1 && !p.stage.includes("终止") &&
+        ["已上市", "NDA", "临床III期", "临床II期", "临床I期", "IND"].includes(p.stage)
+    ),
+    [products]
+  );
 
-    products.forEach((p) => {
-      if (!nodeMap.has(p.id)) {
-        nodeMap.set(p.id, { id: p.id, name: p.brandName, group: "drug", product: p });
-      }
-
-      const tId = `target_${p.target}`;
-      if (!nodeMap.has(tId)) {
-        nodeMap.set(tId, { id: tId, name: p.target, group: "target" });
-      }
-      links.push({ source: p.id, target: tId });
-
-      const compName = p.companyOriginator.trim();
-      const cId = `company_${compName}`;
-      if (!nodeMap.has(cId)) {
-        nodeMap.set(cId, { id: cId, name: compName, group: "company" });
-      }
-      links.push({ source: p.id, target: cId });
-
-      const disName = p.indication[0]?.trim() || "其他";
-      const dId = `disease_${disName}`;
-      if (!nodeMap.has(dId)) {
-        nodeMap.set(dId, { id: dId, name: disName, group: "disease" });
-      }
-      links.push({ source: p.id, target: dId });
-    });
-
-    return {
-      nodes: Array.from(nodeMap.values()),
-      links,
-    };
-  }, [products]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const { nodes, links } = buildGraph();
-    const W = container.clientWidth || 800;
-    const H = container.clientHeight || 600;
+    const W = container.clientWidth;
+    const H = container.clientHeight;
 
-    // Clear and create SVG
+    // --- Scene ---
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    // --- Camera ---
+    const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 10);
+    camera.position.set(0, 0.5, 3.5);
+
+    // --- Renderer ---
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.innerHTML = "";
-    const svg = d3.select(container)
-      .append("svg")
-      .attr("width", W)
-      .attr("height", H)
-      .style("display", "block");
+    container.appendChild(renderer.domElement);
+    renderer.domElement.style.cursor = "grab";
 
-    // Glow filter
-    const defs = svg.append("defs");
-    const filter = defs.append("filter").attr("id", "fg-glow");
-    filter.append("feGaussianBlur").attr("stdDeviation", "2.5").attr("result", "blur");
-    const feMerge = filter.append("feMerge");
-    feMerge.append("feMergeNode").attr("in", "blur");
-    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+    // --- Lights ---
+    scene.add(new THREE.AmbientLight(0x334466, 1.5));
+    const dirLight = new THREE.DirectionalLight(0x00ccff, 1);
+    dirLight.position.set(2, 3, 3);
+    scene.add(dirLight);
+    const backLight = new THREE.DirectionalLight(0x4411aa, 0.5);
+    backLight.position.set(-2, -1, -2);
+    scene.add(backLight);
 
-    const g = svg.append("g");
+    // --- Controls ---
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.3;
+    controls.minDistance = 1.5;
+    controls.maxDistance = 6;
+    controls.target.set(0, 0, 0);
+    controlsRef.current = controls;
 
-    // Zoom
-    svg.call(
-      d3.zoom<SVGSVGElement, unknown>()
-        .scaleExtent([0.3, 3])
-        .on("zoom", (event) => g.attr("transform", event.transform))
-    );
+    // --- Earth globe ---
+    const globeGeo = new THREE.SphereGeometry(0.95, 64, 48);
+    const globeMat = new THREE.MeshPhongMaterial({
+      color: 0x0a2244,
+      emissive: 0x001122,
+      specular: 0x113366,
+      shininess: 10,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const globe = new THREE.Mesh(globeGeo, globeMat);
+    scene.add(globe);
 
-    // Simulation
-    const simulation = d3.forceSimulation<GraphNode>(nodes)
-      .force("link", d3.forceLink<GraphNode, { source: string; target: string }>(links).id((d) => d.id).distance(80))
-      .force("charge", d3.forceManyBody().strength(-180))
-      .force("center", d3.forceCenter(W / 2, H / 2))
-      .force("collision", d3.forceCollide().radius(30));
-
-    // Links
-    const link = g.append("g")
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("stroke", "rgba(0, 229, 255, 0.15)")
-      .attr("stroke-width", 1);
-
-    // Nodes
-    const node = g.append("g")
-      .selectAll("circle")
-      .data(nodes)
-      .join("circle")
-      .attr("r", (d) => (d.group === "drug" ? 12 : d.group === "target" ? 8 : 7))
-      .attr("fill", (d) => COLORS[d.group] || "#fff")
-      .attr("stroke", "#080c14")
-      .attr("stroke-width", 1.5)
-      .style("filter", "url(#fg-glow)")
-      .style("cursor", "pointer");
-
-    // Labels
-    const labels = g.append("g")
-      .selectAll("text")
-      .data(nodes)
-      .join("text")
-      .text((d) => d.name)
-      .attr("font-size", (d) => (d.group === "drug" ? 10 : 8))
-      .attr("fill", (d) => COLORS[d.group] || "#e0f7fa")
-      .attr("dx", (d) => (d.group === "drug" ? 14 : 10))
-      .attr("dy", 3)
-      .style("pointer-events", "none")
-      .style("text-shadow", "0 0 6px rgba(0,229,255,0.5)");
-
-    // Interactions
-    node.on("mouseenter", (_, d) => setHovered(d))
-      .on("mouseleave", () => setHovered(null))
-      .on("click", (event, d) => {
-        event.stopPropagation();
-        if (d.group === "drug") {
-          router.push(`/products/${d.id}`);
-        } else if (d.group === "target") {
-          router.push(`/products?target=${encodeURIComponent(d.name)}`);
-        } else if (d.group === "company") {
-          router.push(`/products?company=${encodeURIComponent(d.name)}`);
-        } else if (d.group === "disease") {
-          router.push(`/products?indication=${encodeURIComponent(d.name)}`);
+    // Atmosphere glow
+    const glowGeo = new THREE.SphereGeometry(0.98, 64, 48);
+    const glowMat = new THREE.ShaderMaterial({
+      uniforms: {},
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        void main() {
+          float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+          gl_FragColor = vec4(0.0, 0.6, 1.0, 1.0) * intensity;
         }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    scene.add(glow);
+
+    // Wireframe grid (like latitude/longitude)
+    const gridGeo = new THREE.SphereGeometry(0.96, 32, 20);
+    const gridMat = new THREE.MeshBasicMaterial({
+      color: 0x003366,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.08,
+    });
+    const grid = new THREE.Mesh(gridGeo, gridMat);
+    scene.add(grid);
+
+    // --- Stars background ---
+    const starsGeo = new THREE.BufferGeometry();
+    const starsCount = 600;
+    const starsPos = new Float32Array(starsCount * 3);
+    for (let i = 0; i < starsCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 4 + Math.random() * 3;
+      starsPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starsPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      starsPos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    starsGeo.setAttribute("position", new THREE.BufferAttribute(starsPos, 3));
+    const starsMat = new THREE.PointsMaterial({ color: 0x4488cc, size: 0.015, transparent: true, opacity: 0.6 });
+    const stars = new THREE.Points(starsGeo, starsMat);
+    scene.add(stars);
+
+    // --- Drug nodes ---
+    const nodeGroup = new THREE.Group();
+    const nodesMap = new Map<THREE.Mesh, ADCProduct>();
+
+    filtered.forEach((p) => {
+      const cfg = STAGE_CONFIG[p.stage] || STAGE_CONFIG["IND"];
+      const [latMin, latMax] = cfg.latRange;
+
+      // Random position within stage's latitude band
+      const lat = THREE.MathUtils.degToRad(latMin + Math.random() * (latMax - latMin));
+      const lon = Math.random() * Math.PI * 2;
+
+      // Spherical to Cartesian on globe surface
+      const r = 0.96;
+      const x = r * Math.cos(lat) * Math.cos(lon);
+      const y = r * Math.sin(lat);
+      const z = r * Math.cos(lat) * Math.sin(lon);
+
+      // Node sphere
+      const nodeGeo = new THREE.SphereGeometry(cfg.size, 12, 8);
+      const nodeMat = new THREE.MeshPhongMaterial({
+        color: new THREE.Color(cfg.color),
+        emissive: new THREE.Color(cfg.color),
+        emissiveIntensity: 0.5,
+        specular: 0xffffff,
+        shininess: 40,
       });
+      const mesh = new THREE.Mesh(nodeGeo, nodeMat);
+      mesh.position.set(x, y, z);
+      mesh.userData = { product: p, stage: p.stage };
+      nodeGroup.add(mesh);
+      nodesMap.set(mesh, p);
 
-    svg.on("click", () => setHovered(null));
-
-    // Tick
-    simulation.on("tick", () => {
-      link
-        .attr("x1", (d: any) => (d.source as GraphNode).x!)
-        .attr("y1", (d: any) => (d.source as GraphNode).y!)
-        .attr("x2", (d: any) => (d.target as GraphNode).x!)
-        .attr("y2", (d: any) => (d.target as GraphNode).y!);
-      node.attr("cx", (d) => d.x!).attr("cy", (d) => d.y!);
-      labels.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      // Text label sprite
+      const labelName = p.brandName.length > 16 ? p.brandName.slice(0, 14) + "…" : p.brandName;
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 32;
+      const cctx = canvas.getContext("2d")!;
+      cctx.fillStyle = "rgba(255,255,255,0.9)";
+      cctx.font = "16px Inter, sans-serif";
+      cctx.textAlign = "center";
+      cctx.fillText(labelName, 128, 20);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.minFilter = THREE.LinearFilter;
+      const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.75, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.position.copy(mesh.position);
+      sprite.position.multiplyScalar(1.08);
+      sprite.scale.set(0.5, 0.0625, 1);
+      nodeGroup.add(sprite);
     });
 
-    // Resize
+    scene.add(nodeGroup);
+    nodesRef.current = nodesMap;
+
+    // --- Raycaster ---
+    const raycaster = new THREE.Raycaster();
+    raycaster.params.Points.threshold = 0.1;
+
+    function getNodeIntersections(event: MouseEvent): THREE.Intersection[] {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(mouse, camera);
+      return raycaster.intersectObjects(Array.from(nodesMap.keys()));
+    }
+
+    renderer.domElement.addEventListener("mousemove", (event: MouseEvent) => {
+      const hits = getNodeIntersections(event);
+      if (hits.length > 0) {
+        const p = nodesMap.get(hits[0].object as THREE.Mesh);
+        setHovered(p || null);
+        setTooltipPos({ x: event.clientX, y: event.clientY });
+        renderer.domElement.style.cursor = "pointer";
+      } else {
+        setHovered(null);
+        renderer.domElement.style.cursor = "grab";
+      }
+    });
+
+    renderer.domElement.addEventListener("click", (event: MouseEvent) => {
+      const hits = getNodeIntersections(event);
+      if (hits.length > 0) {
+        const p = nodesMap.get(hits[0].object as THREE.Mesh);
+        if (p) {
+          setSelected(p);
+          controls.autoRotate = false;
+        }
+      } else {
+        setSelected(null);
+        controls.autoRotate = true;
+      }
+    });
+
+    // --- Animation ---
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      stars.rotation.y += 0.0001;
+      stars.rotation.x += 0.00005;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- Resize ---
     const handleResize = () => {
-      const rw = container.clientWidth || 800;
-      const rh = container.clientHeight || 600;
-      svg.attr("width", rw).attr("height", rh);
-      simulation.force("center", d3.forceCenter(rw / 2, rh / 2));
-      simulation.alpha(0.1).restart();
+      const rw = container.clientWidth;
+      const rh = container.clientHeight;
+      camera.aspect = rw / rh;
+      camera.updateProjectionMatrix();
+      renderer.setSize(rw, rh);
     };
     window.addEventListener("resize", handleResize);
 
     return () => {
-      simulation.stop();
       window.removeEventListener("resize", handleResize);
+      renderer.dispose();
       container.innerHTML = "";
     };
-  }, [buildGraph, router]);
+  }, [filtered]);
 
   return (
     <div className="relative w-full" style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}>
-      <div ref={containerRef} className="w-full h-full bg-grid rounded-xl overflow-hidden border border-cyber-border" />
-      {/* Tooltip */}
-      {hovered && (
-        <div className="absolute top-4 left-4 bg-cyber-card border border-cyber-border rounded-lg px-4 py-3 text-sm z-10 pointer-events-none backdrop-blur-xl">
-          <div className="font-bold" style={{ color: COLORS[hovered.group] }}>
-            {hovered.name}
-          </div>
-          <div className="text-xs text-cyber-text2 mt-1">{GROUP_NAMES[hovered.group]}</div>
-          {hovered.product && (
-            <div className="text-xs text-cyber-text2 mt-1">
-              {hovered.product.companyOriginator} · {hovered.product.stage}
-            </div>
-          )}
+      <div ref={containerRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border" />
+
+      {/* Hover tooltip */}
+      {hovered && !selected && (
+        <div className="fixed z-50 bg-black/85 border border-cyber-border rounded-lg px-3 py-2 text-sm pointer-events-none backdrop-blur-xl"
+          style={{ left: tooltipPos.x + 15, top: tooltipPos.y - 10 }}>
+          <div className="font-bold text-cyber-accent">{hovered.brandName}</div>
+          <div className="text-xs text-cyber-text2">{hovered.stage} · {hovered.target} · {hovered.companyOriginator}</div>
         </div>
       )}
+
+      {/* Selected detail panel */}
+      {selected && (
+        <div className="absolute top-4 right-4 w-80 max-h-[70vh] overflow-y-auto bg-black/90 border border-cyber-border rounded-xl p-5 z-20 backdrop-blur-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between mb-3">
+            <h3 className="text-base font-bold text-cyber-accent">{selected.brandName}</h3>
+            <button onClick={() => { setSelected(null); if (controlsRef.current) controlsRef.current.autoRotate = true; }} className="text-cyber-text2/60 hover:text-cyber-text text-lg leading-none">&times;</button>
+          </div>
+          <div className="text-xs text-cyber-text2 mb-3">{selected.genericNameEn}</div>
+          <div className="space-y-1.5 text-xs">
+            {selected.target && <div><span className="text-cyber-text2/60">靶点:</span> <span className="text-cyber-pink">{selected.target}</span></div>}
+            <div><span className="text-cyber-text2/60">阶段:</span> <span className="text-cyber-accent">{selected.stage}</span></div>
+            {selected.companyOriginator && <div><span className="text-cyber-text2/60">公司:</span> <span className="text-cyber-text">{selected.companyOriginator}</span></div>}
+            {selected.payloadName && <div><span className="text-cyber-text2/60">载荷:</span> <span className="text-cyber-text">{selected.payloadName}</span></div>}
+            {selected.linkerName && <div><span className="text-cyber-text2/60">连接子:</span> <span className="text-cyber-text">{selected.linkerName}</span></div>}
+            {selected.conjugationMethod && <div><span className="text-cyber-text2/60">偶联:</span> <span className="text-cyber-text">{selected.conjugationMethod}</span></div>}
+            {selected.dar && <div><span className="text-cyber-text2/60">DAR:</span> <span className="text-cyber-text">{selected.dar}</span></div>}
+            {selected.antibody && <div><span className="text-cyber-text2/60">抗体:</span> <span className="text-cyber-text">{selected.antibody}</span></div>}
+            {selected.indication?.[0] && selected.indication[0] !== '未公开' && (
+              <div><span className="text-cyber-text2/60">适应症:</span> <span className="text-cyber-green">{selected.indication.slice(0,3).join('; ')}</span></div>
+            )}
+            {selected.referenceLabel && (
+              <div><span className="text-cyber-text2/60">来源:</span> <span className="text-cyber-text2/50 text-[10px]">{selected.referenceLabel}</span></div>
+            )}
+          </div>
+          <a href={`/products/${selected.id}/`} className="inline-block mt-3 text-xs text-cyber-accent hover:underline">查看完整详情 →</a>
+        </div>
+      )}
+
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-cyber-card border border-cyber-border rounded-lg px-3 py-2 text-xs flex gap-4 backdrop-blur-xl">
-        {Object.entries(COLORS).map(([group, color]) => (
-          <div key={group} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-cyber-text2">{GROUP_NAMES[group]}</span>
+      <div className="absolute bottom-4 right-4 bg-black/80 border border-cyber-border rounded-lg px-3 py-2 text-xs flex gap-3 backdrop-blur-xl">
+        {Object.entries(STAGE_CONFIG).map(([stage, { color }]) => (
+          <div key={stage} className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-cyber-text2">{stage === "已上市" ? "已上市" : stage === "NDA" ? "NDA" : stage === "临床III期" ? "III" : stage === "临床II期" ? "II" : stage === "临床I期" ? "I" : "IND"}</span>
           </div>
         ))}
       </div>
-      <div className="absolute top-4 right-4 text-xs text-cyber-text2/60">拖拽: 移动 · 滚轮: 缩放 · 点击: 跳转</div>
     </div>
   );
 }

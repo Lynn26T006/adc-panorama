@@ -16,7 +16,8 @@ export function getProductTargets(): string[] {
 }
 
 export function getProductStages(): string[] {
-  return [...new Set(products.map((p) => p.stage))].sort();
+  const stages = [...new Set(products.map((p) => p.stage))].sort();
+  return ["临床阶段", ...stages];
 }
 
 export function getProductCompanies(): string[] {
@@ -71,20 +72,30 @@ export function filterAndPaginate(params: FilterParams): PaginatedResult {
 
   if (params.search) {
     const q = params.search.toLowerCase();
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const wordRe = new RegExp(`\\b${escaped}\\b`, "i");
+    // Match indication only if not in a negative context (e.g. "HER2-", "HER2-low")
+    const negRe = new RegExp(`${escaped}\\s*[-阴性]|${escaped}\\s*low|${escaped}\\s*negative`, "i");
     filtered = filtered.filter(
       (p) =>
         p.brandName.toLowerCase().includes(q) ||
         p.genericNameEn.toLowerCase().includes(q) ||
         p.genericNameCn.toLowerCase().includes(q) ||
         p.target.toLowerCase().includes(q) ||
-        p.indication.some((i) => i.toLowerCase().includes(q)) ||
+        p.indication.some((i) => wordRe.test(i) && !negRe.test(i)) ||
         p.companyOriginator.toLowerCase().includes(q) ||
         (p.companyLicensee || "").toLowerCase().includes(q)
     );
   }
 
   if (params.stage) {
-    const stages = params.stage.split(",");
+    let stages = params.stage.split(",");
+    // Expand "临床阶段" to all clinical trial phases
+    if (stages.includes("临床阶段")) {
+      stages = stages.filter(s => s !== "临床阶段");
+      stages.push("临床I期", "临床II期", "临床III期", "NDA",
+        "临床I期 (终止)", "临床II期 (终止)", "临床III期 (终止)");
+    }
     filtered = filtered.filter((p) => stages.includes(p.stage));
   }
 

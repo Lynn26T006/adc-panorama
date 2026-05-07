@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 interface Props {
   totalPages: number;
@@ -9,14 +8,20 @@ interface Props {
 }
 
 export default function Pagination({ totalPages, currentPage }: Props) {
-  const searchParams = useSearchParams();
-
+  const [inputPage, setInputPage] = useState("");
   if (totalPages <= 1) return null;
 
   function pageHref(page: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", String(page));
-    return `/products?${params.toString()}`;
+    const sp = new URLSearchParams(window.location.search);
+    sp.set("page", String(page));
+    return `/products?${sp.toString()}`;
+  }
+
+  function handleJump() {
+    const p = parseInt(inputPage);
+    if (p >= 1 && p <= totalPages) {
+      window.location.href = pageHref(p);
+    }
   }
 
   const pages: (number | "...")[] = [];
@@ -30,41 +35,52 @@ export default function Pagination({ totalPages, currentPage }: Props) {
   }
 
   return (
-    <div className="flex items-center justify-center gap-1.5 mt-8">
+    <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
       {currentPage > 1 && (
-        <Link
-          href={pageHref(currentPage - 1)}
-          className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline"
-        >
+        <a href={pageHref(currentPage - 1)}
+          className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline">
           上一页
-        </Link>
+        </a>
       )}
       {pages.map((p, i) =>
         p === "..." ? (
-          <span key={`dots-${i}`} className="px-2 text-cyber-text2/50">
-            ...
-          </span>
+          <span key={`dots-${i}`} className="px-2 text-cyber-text2/50">...</span>
         ) : (
-          <Link
-            key={p}
-            href={pageHref(p)}
+          <a key={p} href={pageHref(p)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all no-underline ${
               p === currentPage
                 ? "bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/50 glow-text"
                 : "text-cyber-text2 border border-transparent hover:border-cyber-border hover:text-cyber-text"
-            }`}
-          >
+            }`}>
             {p}
-          </Link>
+          </a>
         )
       )}
       {currentPage < totalPages && (
-        <Link
-          href={pageHref(currentPage + 1)}
-          className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline"
-        >
+        <a href={pageHref(currentPage + 1)}
+          className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline">
           下一页
-        </Link>
+        </a>
+      )}
+      {totalPages > 10 && (
+        <span className="flex items-center gap-1 text-xs text-cyber-text2/60 ml-2">
+          跳至
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={inputPage}
+            onChange={(e) => setInputPage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleJump()}
+            placeholder={String(currentPage)}
+            className="w-16 px-2 py-1 rounded-md bg-cyber-bg border border-cyber-border text-cyber-text text-sm text-center focus:outline-none focus:border-cyber-accent"
+          />
+          / {totalPages} 页
+          <button onClick={handleJump}
+            className="px-2 py-1 rounded-md text-xs border border-cyber-border text-cyber-text2 hover:text-cyber-accent hover:border-cyber-accent transition-all">
+            GO
+          </button>
+        </span>
       )}
     </div>
   );
