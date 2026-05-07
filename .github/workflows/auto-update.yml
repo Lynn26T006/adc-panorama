@@ -5,6 +5,11 @@ on:
     # Every Monday at 08:00 UTC
     - cron: '0 8 * * 1'
   workflow_dispatch:
+    inputs:
+      full_mode:
+        description: 'Run full re-scrape (fills in missing detail info for all entries)'
+        type: boolean
+        default: false
 
 jobs:
   update:
@@ -22,7 +27,12 @@ jobs:
         run: pip install requests
 
       - name: Run auto-update
-        run: python3 data/scripts/auto_update.py
+        run: |
+          if [ "${{ github.event.inputs.full_mode }}" = "true" ]; then
+            python3 data/scripts/auto_update.py --full
+          else
+            python3 data/scripts/auto_update.py
+          fi
 
       - name: Commit and push if changed
         run: |
