@@ -33,9 +33,7 @@
 
 /* 文字选中高亮色 */::selection { background: rgba(0, 229, 255, 0.3); color: white; }
 
-   工具类(Utilities)
-
-/* 文字发光，青色光晕围绕文字 */
+ /* 文字发光，青色光晕围绕文字 */
 .glow-text { text-shadow: 0 0 10px var(--color-cyber-glow); }
 
 /* 边框发光，小光晕 */
@@ -116,12 +114,7 @@
   pointer-events: none;               /* 不影响鼠标操作 */
 }
 
-   流星/射击星效果
-   8 颗流星在屏幕背景上以不同速度、不同延迟从左上方划过
-   每颗流星由两个元素组成：
-   - .meteor 本身: 2px 青色圆点(头部)
-   - .meteor::after: 50px 渐变尾巴(拖尾)
-
+/* 流星/射击星效果：8颗流星在屏幕背景上以不同速度从左上方划过 */
 @keyframes meteor {
   0% {
     transform: translateX(0) translateY(0) rotate(-45deg);  /* 从左上角开始 */
