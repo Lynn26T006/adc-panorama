@@ -288,6 +288,58 @@ def main():
     if full_mode:
         print(f"Updated {updated_count} existing entries with detail info")
 
+        # Enrich existing approved/clinical entries with SMILES/PDB/FDA
+        enrich_targets = {'已上市', 'NDA', '临床III期', '临床II期', '临床I期'}
+        to_enrich = [e for e in existing
+                     if e.get('stage') in enrich_targets
+                     and (not e.get('payloadSmiles') or not e.get('pdbId') or not e.get('manufacturer'))]
+        print(f"\nEnriching {len(to_enrich)} existing clinical/approved entries...")
+        enriched = 0
+        for i, e in enumerate(to_enrich):
+            try:
+                changed = False
+                payload = e.get('payloadName', '')
+                target = e.get('target', '')
+                brand = e.get('brandName', '')
+
+                if payload and not e.get('payloadSmiles'):
+                    smiles = fetch_pubchem_smiles(payload)
+                    if smiles:
+                        e['payloadSmiles'] = smiles
+                        changed = True
+                        time.sleep(0.25)
+
+                if target and not e.get('pdbId'):
+                    pdb = fetch_pdb_id(target)
+                    if pdb:
+                        e['pdbId'] = pdb
+                        changed = True
+                        time.sleep(0.25)
+
+                if brand and not e.get('manufacturer'):
+                    fda = get_drug_fda_info(brand)
+                    if fda.get('fda_manufacturer'):
+                        e['manufacturer'] = fda['fda_manufacturer']
+                        changed = True
+                    if fda.get('fda_dosage_form') and not e.get('dosageForm'):
+                        e['dosageForm'] = fda['fda_dosage_form']
+                        changed = True
+                    time.sleep(0.4)
+
+                if changed:
+                    enriched += 1
+                    if enriched % 10 == 0:
+                        print(f"  [{i+1}/{len(to_enrich)}] enriched {enriched} so far...")
+                        # Save checkpoint every 50
+                        if enriched % 50 == 0:
+                            with open(JSON_PATH, 'w') as f:
+                                json.dump(existing, f, ensure_ascii=False, indent=2)
+                            print(f"  [checkpoint saved]")
+            except Exception as ex:
+                print(f"  Enrich error for {e.get('brandName','?')}: {ex}")
+                time.sleep(0.5)
+        print(f"Enriched {enriched} entries with SMILES/PDB/FDA data")
+
     # Save
     with open(JSON_PATH, 'w') as f:
         json.dump(existing, f, ensure_ascii=False, indent=2)

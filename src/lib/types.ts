@@ -76,6 +76,7 @@ export interface ADCProduct {
   patentTitle: string;           // 专利标题
   patentAssignee: string;        // 专利权人/专利权归属
   patentFilingDate: string;      // 专利申请日
+  patentExpiry: string;          // 专利过期日（申请日+20年）
   referenceLabel: string;        // 数据来源标注，如ADCdb ID: DRG0XXXXX
   referenceUrl: string;          // 数据来源链接
   lastUpdated: string;           // 最后更新时间

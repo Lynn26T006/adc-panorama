@@ -1,6 +1,6 @@
 // 产品详情页，展示单个ADC药物的完整信息
 // URL格式: /products/DRG0XXXXX/
-// 使用Next.js静态生成(SSG)，构建时预渲染所有3500+ 产品页面
+// 使用Next.js静态生成(SSG)，构建时预渲染所有产品页面
 
 import { Metadata } from "next";
 import { getProductById, getAllProducts } from "@/lib/data";
@@ -18,7 +18,7 @@ export async function generateStaticParams() {
   return getAllProducts().map((p) => ({ id: p.id }));
 }
 
-// 根据当前页面的id动态生成meta标签（浏览器标题栏 + SEO）
+// 根据当前页面的id动态生成meta标签（浏览器标题栏+SEO）
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const product = getProductById(id);

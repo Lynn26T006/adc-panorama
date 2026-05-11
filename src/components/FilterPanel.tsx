@@ -135,7 +135,7 @@ export default function FilterPanel({
       <FilterGroup title="载荷类型" queryKey="payloadClass" allOptions={payloadClasses} picked={current.payloadClass} onPick={handlePick} />
       <FilterGroup title="连接子类型" queryKey="linkerType" allOptions={linkerTypes} picked={current.linkerType} onPick={handlePick} />
 
-      {/* 适应症用 details/summary 展开，因为数量太多了 */}
+      {/* 适应症用details/summary展开，因为数量太多了*/}
       <details>
         <summary className="text-xs font-semibold text-cyber-text2/70 uppercase tracking-wider cursor-pointer mb-2">
           适应症

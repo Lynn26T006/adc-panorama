@@ -8,7 +8,7 @@ interface Props {
   product: ADCProduct;
 }
 
-// 通用区块容器，带标题和发光边框
+// 通用区块容器，带有标题和发光边框
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="cyber-card p-5 space-y-3">
@@ -18,7 +18,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// 标签-内容行，左侧固定宽度标签，右侧自适应
+// 标签，内容行，左侧固定宽度标签，右侧自适应
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
@@ -311,6 +311,15 @@ export default function ProductDetail({ product: p }: Props) {
         {p.patentAssignee && (
           <Row label="专利权人">
             <ClickableField value={p.patentAssignee} color="orange" />
+          </Row>
+        )}
+        {p.patentExpiry && (
+          <Row label="专利过期">
+            <span className={`text-sm font-bold ${p.patentExpiry < '2026-05-09' ? 'text-cyber-green' : p.patentExpiry < '2031-05-09' ? 'text-cyber-orange' : 'text-cyber-text2'}`}>
+              {p.patentExpiry}
+              {p.patentExpiry < '2026-05-09' && ' (已过期)'}
+              {p.patentExpiry >= '2026-05-09' && p.patentExpiry < '2031-05-09' && ' (即将过期)'}
+            </span>
           </Row>
         )}
         {p.referenceLabel && (

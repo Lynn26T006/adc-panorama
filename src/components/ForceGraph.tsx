@@ -65,7 +65,7 @@ export default function ForceGraph({ products }: Props) {
     fillLight.position.set(-2, -1, -2);
     scene.add(fillLight);
 
-    // 轨道控制器，让用户可以拖拽旋转和缩放
+    // 轨道控制器，可以拖拽旋转和缩放
     const ctrl = new OrbitControls(cam, renderer.domElement);
     ctrl.enableDamping = true;
     ctrl.dampingFactor = 0.08;
