@@ -9,6 +9,7 @@ export default function Navbar() {
   const tabs = [
     { href: "/", label: "首页" },
     { href: "/products", label: "产品列表" },
+    { href: "/formulation", label: "制剂冻干" },
     { href: "/visualize", label: "可视化图谱" },
   ];
 
