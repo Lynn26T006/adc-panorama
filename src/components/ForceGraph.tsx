@@ -5,8 +5,15 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ADCProduct } from "@/lib/types";
 
-// 把临床阶段映射到球面上的纬度带 + 颜色 + 节点大小
-// 从北极（已上市）到南极（IND），越高越成熟
+const STAGE_LABEL: Record<string, string> = {
+  "已上市": "已上市",
+  "NDA": "NDA",
+  "临床III期": "III",
+  "临床II期": "II",
+  "临床I期": "I",
+  "IND": "IND",
+};
+
 const STAGE_CONFIG: Record<string, { clr: string; sz: number; lat: [number, number] }> = {
   "已上市": { clr: "#69f0ae", sz: 0.035, lat: [60, 90] },
   "NDA": { clr: "#f44336", sz: 0.03, lat: [30, 55] },
@@ -56,7 +63,6 @@ export default function ForceGraph({ products }: Props) {
     box.appendChild(renderer.domElement);
     renderer.domElement.style.cursor = "grab";
 
-    // 灯光：环境光打底 + 主方向光青色调 + 背面补光紫色调
     scene.add(new THREE.AmbientLight(0x334466, 1.5));
     const keyLight = new THREE.DirectionalLight(0x00ccff, 1);
     keyLight.position.set(2, 3, 3);
@@ -65,7 +71,6 @@ export default function ForceGraph({ products }: Props) {
     fillLight.position.set(-2, -1, -2);
     scene.add(fillLight);
 
-    // 轨道控制器，可以拖拽旋转和缩放
     const ctrl = new OrbitControls(cam, renderer.domElement);
     ctrl.enableDamping = true;
     ctrl.dampingFactor = 0.08;
@@ -87,7 +92,6 @@ export default function ForceGraph({ products }: Props) {
     });
     scene.add(new THREE.Mesh(globeGeo, globeMat));
 
-    // 大气辉光，用shader做出边缘发光的效果
     const auraGeo = new THREE.SphereGeometry(0.98, 64, 48);
     const auraMat = new THREE.ShaderMaterial({
       uniforms: {},
@@ -107,7 +111,6 @@ export default function ForceGraph({ products }: Props) {
     });
     scene.add(new THREE.Mesh(auraGeo, auraMat));
 
-    // 经纬网，wireframe球体套在外面，弱透明度
     const gridGeo = new THREE.SphereGeometry(0.96, 32, 20);
     const gridMat = new THREE.MeshBasicMaterial({
       color: 0x003366,
@@ -187,7 +190,7 @@ export default function ForceGraph({ products }: Props) {
     scene.add(drugGroup);
     meshToDrug.current = drugMap;
 
-    // 射线检测，处理鼠标悬停和点击
+    // 射线检测：鼠标悬停和点击
     const raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 0.1;
 
@@ -226,7 +229,6 @@ export default function ForceGraph({ products }: Props) {
       }
     });
 
-    // 动画循环
     function loop() {
       requestAnimationFrame(loop);
       ctrl.update();
@@ -256,7 +258,6 @@ export default function ForceGraph({ products }: Props) {
     <div className="relative w-full" style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}>
       <div ref={boxRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border" />
 
-      {/* 鼠标悬停时的浮动提示 */}
       {hovered && !picked && (
         <div className="fixed z-50 bg-black/85 border border-cyber-border rounded-lg px-3 py-2 text-sm pointer-events-none backdrop-blur-xl"
           style={{ left: tipXY.x + 15, top: tipXY.y - 10 }}>
@@ -265,7 +266,6 @@ export default function ForceGraph({ products }: Props) {
         </div>
       )}
 
-      {/* 点击后弹出的详情面板 */}
       {picked && (
         <div className="absolute top-4 right-4 w-80 max-h-[70vh] overflow-y-auto bg-black/90 border border-cyber-border rounded-xl p-5 z-20 backdrop-blur-xl shadow-2xl"
           onClick={(e) => e.stopPropagation()}>
@@ -301,14 +301,12 @@ export default function ForceGraph({ products }: Props) {
         </div>
       )}
 
-      {/* 图例：底部右侧 */}
       <div className="absolute bottom-4 right-4 bg-black/80 border border-cyber-border rounded-lg px-3 py-2 text-xs flex gap-3 backdrop-blur-xl">
         {Object.entries(STAGE_CONFIG).map(([phase, { clr }]) => {
-          const short = phase === "已上市" ? "已上市" : phase === "NDA" ? "NDA" : phase === "临床III期" ? "III" : phase === "临床II期" ? "II" : phase === "临床I期" ? "I" : "IND";
           return (
             <div key={phase} className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: clr }} />
-              <span className="text-cyber-text2">{short}</span>
+              <span className="text-cyber-text2">{STAGE_LABEL[phase]}</span>
             </div>
           );
         })}

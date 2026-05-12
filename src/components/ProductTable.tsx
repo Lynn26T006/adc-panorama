@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ADCProduct } from "@/lib/types";
 
-// 不同阶段对应的徽章颜色
 const phaseBadge: Record<string, string> = {
   "已上市": "border-cyber-green/50 text-cyber-green",
   "NDA": "border-cyber-orange/50 text-cyber-orange",

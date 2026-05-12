@@ -11,18 +11,16 @@ export function getProductById(id: string): ADCProduct | undefined {
   return store.find((d) => d.id === id);
 }
 
-// 去重排序后返回所有靶点列表
+// 去重排序
 export function getProductTargets(): string[] {
   return [...new Set(store.map((d) => d.target))].sort();
 }
 
-// 返回所有出现过的研发阶段，把"临床阶段"虚拟标签放在最前面方便筛选
 export function getProductStages(): string[] {
   const raw = [...new Set(store.map((d) => d.stage))].sort();
   return ["临床阶段", ...raw];
 }
 
-// 原研 + 合作方摊平去重
 export function getProductCompanies(): string[] {
   const flat = store.flatMap((d) => [
     d.companyOriginator,
@@ -70,10 +68,6 @@ export interface PaginatedResult {
   totalPages: number;
 }
 
-// 核心筛选 + 分页逻辑
-// ---- 制剂/冻干数据提取函数 ----
-
-/** 返回所有有制剂数据的产品 */
 export function getProductsWithFormulation(): ADCProduct[] {
   return store.filter(p =>
     p.dosageForm ||
@@ -88,22 +82,18 @@ export function getProductsWithFormulation(): ADCProduct[] {
   );
 }
 
-/** 去重所有剂型 */
 export function getDosageForms(): string[] {
   return [...new Set(store.map(p => p.dosageForm).filter(Boolean))].sort();
 }
 
-/** 去重冻干pH */
 export function getLyoPhValues(): string[] {
   return [...new Set(store.map(p => p.lyoPh).filter(Boolean))].sort();
 }
 
-/** 去重储存条件 */
 export function getStorageConditions(): string[] {
   return [...new Set(store.map(p => p.storageCondition).filter(Boolean))].sort();
 }
 
-// 缓冲体系归类映射
 const BUFFER_CLASS_MAP: Record<string, string> = {
   "柠檬酸钠": "柠檬酸盐",
   "柠檬酸": "柠檬酸",
@@ -115,7 +105,6 @@ const BUFFER_CLASS_MAP: Record<string, string> = {
   "甘氨酸": "甘氨酸",
 };
 
-/** 缓冲体系归类 */
 export function classifyBuffer(raw: string): string {
   if (!raw) return "";
   for (const [key, label] of Object.entries(BUFFER_CLASS_MAP)) {
@@ -135,7 +124,6 @@ const STABILIZER_CLASS_MAP: Record<string, string> = {
   "聚山梨酯80": "聚山梨酯80",
 };
 
-/** 稳定剂归类 */
 export function classifyStabilizer(raw: string): string {
   if (!raw) return "";
   for (const [key, label] of Object.entries(STABILIZER_CLASS_MAP)) {
@@ -153,7 +141,6 @@ const SURFACTANT_CLASS_MAP: Record<string, string> = {
   "吐温20": "聚山梨酯20",
 };
 
-/** 表面活性剂归类 */
 export function classifySurfactant(raw: string): string {
   if (!raw) return "";
   for (const [key, label] of Object.entries(SURFACTANT_CLASS_MAP)) {
@@ -162,21 +149,18 @@ export function classifySurfactant(raw: string): string {
   return raw.split(" ")[0].split(";")[0].trim().replace(/,$/, "");
 }
 
-/** 去重缓冲体系分类 */
 export function getBufferClasses(): string[] {
   return [...new Set(
     store.map(p => classifyBuffer(p.lyoExcipientsBuffer)).filter(Boolean)
   )].sort();
 }
 
-/** 去重稳定剂分类 */
 export function getStabilizerClasses(): string[] {
   return [...new Set(
     store.map(p => classifyStabilizer(p.lyoExcipientsStabilizer)).filter(Boolean)
   )].sort();
 }
 
-/** 去重表面活性剂分类 */
 export function getSurfactantClasses(): string[] {
   return [...new Set(
     store.map(p => classifySurfactant(p.lyoExcipientsSurfactant)).filter(Boolean)

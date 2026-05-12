@@ -1,73 +1,83 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Navbar from "@/components/Navbar";
-import {
-  getProductsWithFormulation,
-  getDosageForms,
-  getBufferClasses,
-  getStabilizerClasses,
-  getSurfactantClasses,
-  getLyoPhValues,
-  getStorageConditions,
-  classifyBuffer,
-  classifyStabilizer,
-  classifySurfactant,
-} from "@/lib/data";
-import type { ADCProduct } from "@/lib/types";
+import { fetchFormulation, fetchStats, type StatsResult, type ADCProduct } from "@/lib/api-client";
+import { classifyBuffer, classifyStabilizer, classifySurfactant } from "@/lib/data";
 
 const PAGE_SIZE = 12;
 
-function hasFormulationDetail(p: ADCProduct): boolean {
-  return !!(p.lyoExcipientsBuffer || p.lyoExcipientsStabilizer || p.lyoExcipientsSurfactant || p.lyoPh || p.lyoCycle || p.liquidExcipients);
+function phColor(lyoPh: string): string {
+  const m = lyoPh.match(/(\d+(?:\.\d+)?)/);
+  if (!m) return "text-cyber-text";
+  const v = parseFloat(m[1]);
+  if (v < 5.5) return "text-cyber-orange";
+  if (v <= 7.5) return "text-cyber-green";
+  return "text-cyber-accent2";
+}
+
+function buildPages(current: number, total: number): (number | "...")[] {
+  const pages: (number | "...")[] = [];
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= current - 2 && i <= current + 2)) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== "...") {
+      pages.push("...");
+    }
+  }
+  return pages;
 }
 
 export default function FormulationPage() {
-  const all = useMemo(() => getProductsWithFormulation(), []);
-  const withDetail = useMemo(() => all.filter(hasFormulationDetail), [all]);
-  const dosageForms = useMemo(() => getDosageForms(), []);
-  const bufferClasses = useMemo(() => getBufferClasses(), []);
-  const stabilizerClasses = useMemo(() => getStabilizerClasses(), []);
-  const surfactantClasses = useMemo(() => getSurfactantClasses(), []);
-  const phValues = useMemo(() => getLyoPhValues(), []);
-  const storageConds = useMemo(() => getStorageConditions(), []);
+  const [allProducts, setAllProducts] = useState<ADCProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatsResult | null>(null);
 
-  // 统计（只统计有配方细节的产品）
-  const stats = useMemo(() => {
-    const lyo = withDetail.filter(p => p.lyophilization === true);
-    const liquid = withDetail.filter(p => !p.lyophilization && !!p.liquidExcipients);
-    const ph6plus = withDetail.filter(p => {
-      const ph = p.lyoPh;
-      if (!ph) return false;
-      const m = ph.match(/(\d+(?:\.\d+)?)/);
-      return m && parseFloat(m[1]) >= 6;
-    });
-    return {
-      total: withDetail.length,
-      lyo: lyo.length,
-      liquid: liquid.length,
-      buffers: bufferClasses.length,
-      ph6plus: ph6plus.length,
-      cycles: new Set(withDetail.map(p => p.lyoCycle).filter(Boolean)).size,
-    };
-  }, [withDetail, bufferClasses]);
+  useEffect(() => {
+    async function load() {
+      const [formRes, statsRes] = await Promise.all([
+        fetchFormulation({ pageSize: 100 }),
+        fetchStats(),
+      ]);
+      setAllProducts(formRes.products);
+      setStats(statsRes);
+      setLoading(false);
+    }
+    load();
+  }, []);
 
-  // 筛选状态
+  const bufferClasses = useMemo(
+    () => [...new Set(allProducts.map(p => classifyBuffer(p.lyoExcipientsBuffer)).filter(Boolean))].sort(),
+    [allProducts]
+  );
+  const stabilizerClasses = useMemo(
+    () => [...new Set(allProducts.map(p => classifyStabilizer(p.lyoExcipientsStabilizer)).filter(Boolean))].sort(),
+    [allProducts]
+  );
+  const surfactantClasses = useMemo(
+    () => [...new Set(allProducts.map(p => classifySurfactant(p.lyoExcipientsSurfactant)).filter(Boolean))].sort(),
+    [allProducts]
+  );
+  const phValues = useMemo(
+    () => [...new Set(allProducts.map(p => p.lyoPh).filter((v): v is string => !!v))].sort(),
+    [allProducts]
+  );
+  const storageConds = useMemo(
+    () => [...new Set(allProducts.map(p => p.storageCondition).filter((v): v is string => !!v))].sort(),
+    [allProducts]
+  );
+
   const [dosageFilter, setDosageFilter] = useState("全部");
   const [bufferFilter, setBufferFilter] = useState("全部");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [detailOnly, setDetailOnly] = useState(true);
 
-  // 过滤
   const filtered = useMemo(() => {
-    let pool = [...all];
+    let pool = [...allProducts];
     if (dosageFilter === "冻干粉针") {
       pool = pool.filter(p => p.lyophilization === true);
     } else if (dosageFilter === "注射液") {
-      pool = pool.filter(p => p.dosageForm && !p.lyophilization);
-    } else if (dosageFilter !== "全部") {
-      pool = pool.filter(p => p.dosageForm === dosageFilter);
+      pool = pool.filter(p => p.dosageForm && !p.lyophilization && String(p.dosageForm).includes("液"));
     }
     if (bufferFilter !== "全部") {
       pool = pool.filter(p => classifyBuffer(p.lyoExcipientsBuffer) === bufferFilter);
@@ -75,13 +85,13 @@ export default function FormulationPage() {
     if (search.trim()) {
       const q = search.toLowerCase();
       pool = pool.filter(p =>
-        p.antibody.toLowerCase().includes(q) ||
-        p.brandName.toLowerCase().includes(q) ||
-        p.genericNameEn.toLowerCase().includes(q)
+        p.antibody?.toLowerCase().includes(q) ||
+        p.brandName?.toLowerCase().includes(q) ||
+        p.genericNameCn?.toLowerCase().includes(q)
       );
     }
     return pool;
-  }, [all, dosageFilter, bufferFilter, search]);
+  }, [allProducts, dosageFilter, bufferFilter, search]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => {
@@ -89,87 +99,47 @@ export default function FormulationPage() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  // 切换筛选时回到第一页
   const setFilter = (setter: (v: string) => void, val: string) => {
     setter(val);
     setPage(1);
   };
 
-  // 配方生成器状态
   const [recipeBuffer, setRecipeBuffer] = useState("");
   const [recipeStabilizer, setRecipeStabilizer] = useState("");
   const [recipeSurfactant, setRecipeSurfactant] = useState("");
   const [recipePh, setRecipePh] = useState("");
   const [recipeStorage, setRecipeStorage] = useState("");
   const [recipeMatches, setRecipeMatches] = useState<ADCProduct[]>([]);
+  const [recipeAggregate, setRecipeAggregate] = useState<any>(null);
   const [recipeGenerated, setRecipeGenerated] = useState(false);
+  const [recipeLoading, setRecipeLoading] = useState(false);
 
-  function handleGenerateRecipe() {
-    if (!recipeBuffer && !recipeStabilizer && !recipeSurfactant && !recipePh && !recipeStorage) {
-      return;
-    }
-    const matches = all.filter(p => {
-      if (recipeBuffer && classifyBuffer(p.lyoExcipientsBuffer) !== recipeBuffer) return false;
-      if (recipeStabilizer) {
-        const s = classifyStabilizer(p.lyoExcipientsStabilizer);
-        if (s !== recipeStabilizer && !p.lyoExcipientsStabilizer?.includes(recipeStabilizer)) return false;
-      }
-      if (recipeSurfactant) {
-        const sf = classifySurfactant(p.lyoExcipientsSurfactant);
-        if (sf !== recipeSurfactant && !p.lyoExcipientsSurfactant?.includes(recipeSurfactant)) return false;
-      }
-      if (recipePh && p.lyoPh !== recipePh) return false;
-      if (recipeStorage && p.storageCondition !== recipeStorage) return false;
-      return true;
-    });
-    setRecipeMatches(matches);
+  async function handleGenerateRecipe() {
+    if (!recipeBuffer && !recipeStabilizer && !recipeSurfactant && !recipePh && !recipeStorage) return;
+    setRecipeLoading(true);
     setRecipeGenerated(true);
-    setPage(1);
-  }
 
-  // 聚合配方：取匹配产品中最常见的字段值
-  function mostCommon<T>(items: T[]): T | undefined {
-    const freq = new Map<string, { val: T; count: number }>();
-    for (const item of items) {
-      const k = String(item);
-      const entry = freq.get(k) || { val: item, count: 0 };
-      entry.count++;
-      freq.set(k, entry);
-    }
-    let best: { val: T; count: number } | undefined;
-    for (const entry of freq.values()) {
-      if (!best || entry.count > best.count) best = entry;
-    }
-    return best?.val;
-  }
+    const params = new URLSearchParams();
+    if (recipeBuffer) params.set("buffer", recipeBuffer);
+    if (recipeStabilizer) params.set("stabilizer", recipeStabilizer);
+    if (recipeSurfactant) params.set("surfactant", recipeSurfactant);
+    if (recipePh) params.set("ph", recipePh);
+    if (recipeStorage) params.set("storage", recipeStorage);
 
-  const aggregateRecipe = useMemo(() => {
-    if (recipeMatches.length === 0) return null;
-    // 取第一个匹配产品作为参考，聚合高频值
-    const buffers = recipeMatches.map(p => p.lyoExcipientsBuffer).filter(Boolean);
-    const stabs = recipeMatches.map(p => p.lyoExcipientsStabilizer).filter(Boolean);
-    const surfs = recipeMatches.map(p => p.lyoExcipientsSurfactant).filter(Boolean);
-    const phs = recipeMatches.map(p => p.lyoPh).filter(Boolean);
-    const cycles = recipeMatches.map(p => p.lyoCycle).filter(Boolean);
-    const recons = recipeMatches.map(p => p.reconstitutionMedia).filter(Boolean);
-    const storages = recipeMatches.map(p => p.storageCondition).filter(Boolean);
-    const shelves = recipeMatches.map(p => p.shelfLife).filter(Boolean);
-    const containers = recipeMatches.map(p => p.containerClosure).filter(Boolean);
-    return {
-      buffer: mostCommon(buffers) || "",
-      stabilizer: mostCommon(stabs) || "",
-      surfactant: mostCommon(surfs) || "",
-      ph: mostCommon(phs) || "",
-      cycle: mostCommon(cycles) || "",
-      reconstitution: mostCommon(recons) || "",
-      storage: mostCommon(storages) || "",
-      shelfLife: mostCommon(shelves) || "",
-      container: mostCommon(containers) || "",
-    };
-  }, [recipeMatches]);
+    try {
+      const res = await fetch(`/api/formulation/recipe/?${params.toString()}`);
+      const data = await res.json();
+      setRecipeMatches(data.products || []);
+      setRecipeAggregate(data.aggregate || null);
+    } catch {
+      setRecipeMatches([]);
+      setRecipeAggregate(null);
+    }
+    setRecipeLoading(false);
+  }
 
   function handleRandomSuggest() {
-    const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+    const pick = (arr: (string | null)[]) => arr.filter(Boolean)[Math.floor(Math.random() * arr.length)] || "";
     setRecipeBuffer(pick(bufferClasses) || "");
     setRecipeStabilizer(pick(stabilizerClasses) || "");
     setRecipeSurfactant(pick(surfactantClasses) || "");
@@ -177,27 +147,36 @@ export default function FormulationPage() {
     setRecipeStorage(pick(storageConds) || "");
   }
 
+  const pageNumbers = useMemo(() => buildPages(page, totalPages), [page, totalPages]);
+
   return (
     <>
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 页面标题 */}
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-cyber-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm text-cyber-text2">从数据库加载制剂数据...</p>
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="mb-8">
           <h1 className="text-2xl font-extrabold gradient-text">制剂与冻干工艺</h1>
           <p className="text-sm text-cyber-text2 mt-1">
-            覆盖冻干粉针与注射液配方数据 · {all.length} 款产品
+            覆盖冻干粉针与注射液配方数据 · {stats?.withFormulation || allProducts.length} 款产品
           </p>
         </div>
 
-        {/* 统计卡片 */}
         <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
           {[
-            { label: "制剂产品", value: stats.total, gradient: "from-cyber-accent to-cyan-400" },
-            { label: "冻干粉针", value: stats.lyo, gradient: "from-cyber-pink to-purple-400" },
-            { label: "注射液/溶液", value: stats.liquid, gradient: "from-cyber-green to-emerald-400" },
-            { label: "缓冲体系", value: stats.buffers, gradient: "from-cyber-orange to-yellow-400" },
-            { label: "pH ≥ 6 产品", value: stats.ph6plus, gradient: "from-cyber-accent2 to-violet-400" },
-            { label: "冻干周期种类", value: stats.cycles, gradient: "from-cyber-green to-teal-400" },
+            { label: "制剂产品", value: stats?.withFormulation || allProducts.length, gradient: "from-cyber-accent to-cyan-400" },
+            { label: "冻干粉针", value: stats?.lyophilized || 0, gradient: "from-cyber-pink to-purple-400" },
+            { label: "已上市ADC", value: stats?.approved || 0, gradient: "from-cyber-green to-emerald-400" },
+            { label: "缓冲体系", value: bufferClasses.length, gradient: "from-cyber-orange to-yellow-400" },
+            { label: "总药物数", value: stats?.totalDrugs || 0, gradient: "from-cyber-accent2 to-violet-400" },
+            { label: "稳定剂种类", value: stabilizerClasses.length, gradient: "from-cyber-green to-teal-400" },
           ].map(card => (
             <div key={card.label} className="cyber-card p-4 text-center">
               <div className={`text-3xl font-extrabold bg-gradient-to-r ${card.gradient} bg-clip-text text-transparent`}>
@@ -208,9 +187,7 @@ export default function FormulationPage() {
           ))}
         </section>
 
-        {/* 快速筛选 */}
         <section className="mb-6 space-y-3">
-          {/* 剂型筛选 */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-cyber-text2/70 uppercase mr-1">剂型</span>
             {["全部", "冻干粉针", "注射液"].map(opt => (
@@ -228,7 +205,6 @@ export default function FormulationPage() {
             ))}
           </div>
 
-          {/* 缓冲体系筛选 */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-semibold text-cyber-text2/70 uppercase mr-1">缓冲</span>
             <button
@@ -256,7 +232,6 @@ export default function FormulationPage() {
             ))}
           </div>
 
-          {/* 搜索 */}
           <div className="flex gap-2 items-center">
             <input
               type="text"
@@ -279,7 +254,6 @@ export default function FormulationPage() {
           </div>
         </section>
 
-        {/* 产品表格 */}
         <section className="mb-8">
           <div className="cyber-card overflow-x-auto">
             <table className="w-full text-sm">
@@ -338,18 +312,7 @@ export default function FormulationPage() {
                       </td>
                       <td className="p-3">
                         {p.lyoPh ? (
-                          <span className={`text-xs font-mono ${
-                            (() => {
-                              const m = p.lyoPh.match(/(\d+(?:\.\d+)?)/);
-                              if (m) {
-                                const v = parseFloat(m[1]);
-                                if (v < 5.5) return "text-cyber-orange";
-                                if (v <= 7.5) return "text-cyber-green";
-                                return "text-cyber-accent2";
-                              }
-                              return "text-cyber-text";
-                            })()
-                          }`}>
+                          <span className={`text-xs font-mono ${phColor(p.lyoPh)}`}>
                             {p.lyoPh}
                           </span>
                         ) : (
@@ -376,31 +339,20 @@ export default function FormulationPage() {
                   上一页
                 </button>
               )}
-              {(() => {
-                const wing = 2;
-                const pages: (number | "...")[] = [];
-                for (let i = 1; i <= totalPages; i++) {
-                  if (i === 1 || i === totalPages || (i >= page - wing && i <= page + wing)) {
-                    pages.push(i);
-                  } else if (pages[pages.length - 1] !== "...") {
-                    pages.push("...");
-                  }
-                }
-                return pages.map((item, k) =>
-                  item === "..." ? (
-                    <span key={`dots-${k}`} className="px-2 text-cyber-text2/50">...</span>
-                  ) : (
-                    <button key={item} onClick={() => setPage(item as number)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        item === page
-                          ? "bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/50 glow-text"
-                          : "text-cyber-text2 border border-transparent hover:border-cyber-border hover:text-cyber-text"
-                      }`}>
-                      {item}
-                    </button>
-                  )
-                );
-              })()}
+              {pageNumbers.map((item, k) =>
+                item === "..." ? (
+                  <span key={`dots-${k}`} className="px-2 text-cyber-text2/50">...</span>
+                ) : (
+                  <button key={item} onClick={() => setPage(item as number)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      item === page
+                        ? "bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/50 glow-text"
+                        : "text-cyber-text2 border border-transparent hover:border-cyber-border hover:text-cyber-text"
+                    }`}>
+                    {item}
+                  </button>
+                )
+              )}
               {page < totalPages && (
                 <button onClick={() => setPage(page + 1)}
                   className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all">
@@ -430,7 +382,6 @@ export default function FormulationPage() {
           )}
         </section>
 
-        {/* 配方生成器 */}
         <section className="mb-12">
           <div className="cyber-card p-6">
             <div className="flex items-center gap-2 mb-6">
@@ -440,7 +391,6 @@ export default function FormulationPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 左侧：参数选择 */}
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-cyber-text2/70 uppercase block mb-1">缓冲体系</label>
@@ -508,9 +458,10 @@ export default function FormulationPage() {
                   </button>
                   <button
                     onClick={handleGenerateRecipe}
-                    className="text-sm px-6 py-2 rounded-lg bg-cyber-accent hover:bg-cyan-400 text-cyber-bg font-bold transition-all hover:shadow-[0_0_15px_rgba(0,229,255,0.5)]"
+                    disabled={recipeLoading}
+                    className="text-sm px-6 py-2 rounded-lg bg-cyber-accent hover:bg-cyan-400 text-cyber-bg font-bold transition-all hover:shadow-[0_0_15px_rgba(0,229,255,0.5)] disabled:opacity-50"
                   >
-                    生成配方
+                    {recipeLoading ? "查询中..." : "生成配方"}
                   </button>
                 </div>
                 {(recipeBuffer || recipeStabilizer || recipeSurfactant || recipePh || recipeStorage) && (
@@ -524,7 +475,6 @@ export default function FormulationPage() {
                 )}
               </div>
 
-              {/* 右侧：生成结果 */}
               <div className="border-l border-cyber-border/30 pl-6">
                 {!recipeGenerated ? (
                   <div className="flex items-center justify-center h-full min-h-[200px]">
@@ -547,68 +497,44 @@ export default function FormulationPage() {
                       <span className="text-sm text-cyber-text2">款产品</span>
                     </div>
 
-                    {/* 聚合配方卡片 */}
-                    {aggregateRecipe && (
+                    {recipeLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-cyber-accent border-t-transparent rounded-full animate-spin" />
+                        <span className="text-sm text-cyber-text2 ml-3">数据库查询中...</span>
+                      </div>
+                    ) : recipeAggregate && (
                       <div className="cyber-card p-4 space-y-2 text-sm">
-                        <h3 className="text-xs font-semibold text-cyber-accent uppercase tracking-wider mb-2">推荐配方</h3>
-                        {aggregateRecipe.buffer && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">缓冲体系</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.buffer}</span>
-                          </div>
+                        <h3 className="text-xs font-semibold text-cyber-accent uppercase tracking-wider mb-2">推荐配方（高频聚合）</h3>
+                        {recipeAggregate.buffer && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">缓冲体系</span><span className="text-cyber-text font-medium">{recipeAggregate.buffer}</span></div>
                         )}
-                        {aggregateRecipe.stabilizer && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">稳定/赋形剂</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.stabilizer}</span>
-                          </div>
+                        {recipeAggregate.stabilizer && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">稳定/赋形剂</span><span className="text-cyber-text font-medium">{recipeAggregate.stabilizer}</span></div>
                         )}
-                        {aggregateRecipe.surfactant && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">表面活性剂</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.surfactant}</span>
-                          </div>
+                        {recipeAggregate.surfactant && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">表面活性剂</span><span className="text-cyber-text font-medium">{recipeAggregate.surfactant}</span></div>
                         )}
-                        {aggregateRecipe.ph && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">pH</span>
-                            <span className="text-cyber-text font-mono">{aggregateRecipe.ph}</span>
-                          </div>
+                        {recipeAggregate.ph && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">pH</span><span className="text-cyber-text font-mono">{recipeAggregate.ph}</span></div>
                         )}
-                        {aggregateRecipe.cycle && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">冻干周期</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.cycle}</span>
-                          </div>
+                        {recipeAggregate.cycle && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">冻干周期</span><span className="text-cyber-text font-medium">{recipeAggregate.cycle}</span></div>
                         )}
-                        {aggregateRecipe.reconstitution && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">复溶溶媒</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.reconstitution}</span>
-                          </div>
+                        {recipeAggregate.reconstitution && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">复溶溶媒</span><span className="text-cyber-text font-medium">{recipeAggregate.reconstitution}</span></div>
                         )}
-                        {aggregateRecipe.storage && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">储存条件</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.storage}</span>
-                          </div>
+                        {recipeAggregate.storage && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">储存条件</span><span className="text-cyber-text font-medium">{recipeAggregate.storage}</span></div>
                         )}
-                        {aggregateRecipe.shelfLife && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">有效期</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.shelfLife}</span>
-                          </div>
+                        {recipeAggregate.shelfLife && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">有效期</span><span className="text-cyber-text font-medium">{recipeAggregate.shelfLife}</span></div>
                         )}
-                        {aggregateRecipe.container && (
-                          <div className="flex justify-between">
-                            <span className="text-cyber-text2/60">包材</span>
-                            <span className="text-cyber-text font-medium">{aggregateRecipe.container}</span>
-                          </div>
+                        {recipeAggregate.container && (
+                          <div className="flex justify-between"><span className="text-cyber-text2/60">包材</span><span className="text-cyber-text font-medium">{recipeAggregate.container}</span></div>
                         )}
                       </div>
                     )}
 
-                    {/* 匹配产品列表 */}
                     <div>
                       <h3 className="text-xs font-semibold text-cyber-text2/70 uppercase mb-2">匹配产品</h3>
                       <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
@@ -635,6 +561,8 @@ export default function FormulationPage() {
             </div>
           </div>
         </section>
+          </>
+        )}
       </main>
     </>
   );

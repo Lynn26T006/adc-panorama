@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { ADCProduct } from "@/lib/types";
 import ClickableField from "./ClickableField";
+import BookmarkButton from "./BookmarkButton";
 
 interface Props {
   product: ADCProduct;
 }
 
-// 通用区块容器，带有标题和发光边框
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="cyber-card p-5 space-y-3">
@@ -18,7 +18,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// 标签，内容行，左侧固定宽度标签，右侧自适应
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
@@ -31,14 +30,16 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export default function ProductDetail({ product: p }: Props) {
   return (
     <div className="space-y-5">
-      {/* 顶部标题区：商品名 + 通用名 + 阶段 + 批准年份 + 批准地区 */}
       <div className="cyber-card p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-extrabold gradient-text">{p.brandName}</h1>
-            <p className="text-sm text-cyber-text2 mt-2">
-              {p.genericNameEn} / {p.genericNameCn}
-            </p>
+          <div className="flex items-start gap-3">
+            <BookmarkButton drugId={p.id} />
+            <div>
+              <h1 className="text-2xl font-extrabold gradient-text">{p.brandName}</h1>
+              <p className="text-sm text-cyber-text2 mt-2">
+                {p.genericNameEn} / {p.genericNameCn}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <ClickableField value={p.stage} href={`/products?stage=${encodeURIComponent(p.stage)}`} color="green" />
@@ -56,7 +57,6 @@ export default function ProductDetail({ product: p }: Props) {
         </div>
       </div>
 
-      {/* Basic Info */}
       <Section title="基本信息">
         <Row label="靶点">
           <ClickableField value={p.target} href={`/products?target=${encodeURIComponent(p.target)}`} color="pink" />
@@ -82,7 +82,6 @@ export default function ProductDetail({ product: p }: Props) {
         )}
       </Section>
 
-      {/* 载荷 + 连接子：名称、类型、机制、SMILES、结构式图 */}
       <Section title="载荷 & 连接子">
         <Row label="载荷名称">
           <span className="text-sm text-cyber-text font-mono">{p.payloadName}</span>
@@ -114,7 +113,6 @@ export default function ProductDetail({ product: p }: Props) {
         </Row>
       </Section>
 
-      {/* 偶联工艺：偶联方式、位点、化学、DAR 等 */}
       <Section title="偶联工艺">
         <Row label="偶联方式">
           <ClickableField value={p.conjugationMethod} href={`/products?conjugationMethod=${encodeURIComponent(p.conjugationMethod)}`} color="purple" />
@@ -136,7 +134,6 @@ export default function ProductDetail({ product: p }: Props) {
         </Row>
       </Section>
 
-      {/* Formulation & Lyophilization */}
       <Section title="制剂 & 冻干工艺">
         <Row label="剂型">
           <span className="text-sm text-cyber-text font-bold">{p.dosageForm}</span>
@@ -217,7 +214,6 @@ export default function ProductDetail({ product: p }: Props) {
         )}
       </Section>
 
-      {/* Analytics */}
       {(p.purityMethod || p.potencyMethod || p.criticalQualityAttrs) && (
         <Section title="分析 & 质控">
           {p.criticalQualityAttrs && (
@@ -238,7 +234,6 @@ export default function ProductDetail({ product: p }: Props) {
         </Section>
       )}
 
-      {/* Cell line & sequence */}
       {(p.cellLine || p.antibodySequenceHeavy || p.antibodySequenceLight || p.signalPeptide || p.plasmidInfo) && (
         <Section title="细胞株 & 序列">
           {p.cellLine && (
@@ -269,7 +264,6 @@ export default function ProductDetail({ product: p }: Props) {
         </Section>
       )}
 
-      {/* PDB */}
       {p.pdbId && (
         <Section title="PDB 结构">
           <Row label="PDB 编号">
@@ -285,7 +279,6 @@ export default function ProductDetail({ product: p }: Props) {
         </Section>
       )}
 
-      {/* Patents & References */}
       <Section title="专利 & 来源验证">
         {p.patentNumber && p.patentNumber !== "未公开" && (
           <Row label="专利号">
@@ -315,11 +308,23 @@ export default function ProductDetail({ product: p }: Props) {
         )}
         {p.patentExpiry && (
           <Row label="专利过期">
-            <span className={`text-sm font-bold ${p.patentExpiry < '2026-05-09' ? 'text-cyber-green' : p.patentExpiry < '2031-05-09' ? 'text-cyber-orange' : 'text-cyber-text2'}`}>
-              {p.patentExpiry}
-              {p.patentExpiry < '2026-05-09' && ' (已过期)'}
-              {p.patentExpiry >= '2026-05-09' && p.patentExpiry < '2031-05-09' && ' (即将过期)'}
-            </span>
+            {(() => {
+              const now = new Date();
+              const fiveYears = new Date();
+              fiveYears.setFullYear(now.getFullYear() + 5);
+              const expiryDate = new Date(p.patentExpiry);
+              const expired = expiryDate < now;
+              const expiringSoon = !expired && expiryDate < fiveYears;
+              return (
+                <>
+                  <span className={`text-sm font-bold ${expired ? 'text-cyber-green' : expiringSoon ? 'text-cyber-orange' : 'text-cyber-text2'}`}>
+                    {p.patentExpiry}
+                  </span>
+                  {expired && ' (已过期)'}
+                  {expiringSoon && ' (即将过期)'}
+                </>
+              );
+            })()}
           </Row>
         )}
         {p.referenceLabel && (

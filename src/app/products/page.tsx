@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { fetchDrugs, PaginatedResult } from "@/lib/api-client";
 import {
-  filterAndPaginate,
   getProductStages,
   getProductTargets,
   getProductIndications,
@@ -10,7 +10,6 @@ import {
   getPayloadClasses,
   getLinkerTypes,
 } from "@/lib/data";
-import { PaginatedResult } from "@/lib/data";
 import Navbar from "@/components/Navbar";
 import SearchBar from "@/components/SearchBar";
 import ProductTable from "@/components/ProductTable";
@@ -28,6 +27,7 @@ function parseParams(): Record<string, string> {
 
 export default function ProductsPage() {
   const [result, setResult] = useState<PaginatedResult | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const stages = getProductStages();
   const targets = getProductTargets();
@@ -36,23 +36,25 @@ export default function ProductsPage() {
   const payloadClasses = getPayloadClasses();
   const linkerTypes = getLinkerTypes();
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     const params = parseParams();
-    const r = filterAndPaginate({
-      search: params.search,
-      stage: params.stage,
-      target: params.target,
-      indication: params.indication,
-      company: params.company,
-      conjugationMethod: params.conjugationMethod,
-      payloadClass: params.payloadClass,
-      linkerType: params.linkerType,
-      sort: params.sort,
-      order: params.order as "asc" | "desc" | undefined,
-      page: params.page ? parseInt(params.page) : 1,
-      pageSize: 15,
-    });
-    setResult(r);
+    setLoading(true);
+    try {
+      const r = await fetchDrugs({
+        search: params.search,
+        stage: params.stage,
+        target: params.target,
+        payloadClass: params.payloadClass,
+        conjugationMethod: params.conjugationMethod,
+        sort: params.sort,
+        order: params.order as "asc" | "desc" | undefined,
+        page: params.page ? parseInt(params.page) : 1,
+        pageSize: 15,
+      });
+      setResult(r);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function ProductsPage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, [loadData]);
 
-  if (!result) {
+  if (!result || loading) {
     return (
       <>
         <Navbar />

@@ -1,39 +1,46 @@
-// 产品详情页，展示单个ADC药物的完整信息
-// URL格式: /products/DRG0XXXXX/
-// 使用Next.js静态生成(SSG)，构建时预渲染所有产品页面
+"use client";
 
-import { Metadata } from "next";
-import { getProductById, getAllProducts } from "@/lib/data";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { fetchDrug } from "@/lib/api-client";
+import type { ADCProduct } from "@/lib/types";
 import Navbar from "@/components/Navbar";
 import ProductDetail from "@/components/ProductDetail";
+import CommentSection from "@/components/CommentSection";
 import { notFound } from "next/navigation";
 
-// Next.js 15的params是异步的Promise类型
-interface Props {
-  params: Promise<{ id: string }>;
-}
+export default function ProductPage() {
+  const params = useParams<{ id: string }>();
+  const [product, setProduct] = useState<ADCProduct | null>(null);
+  const [loading, setLoading] = useState(true);
 
-// 构建时告诉Next.js需要生成哪些id的页面（全量静态化）
-export async function generateStaticParams() {
-  return getAllProducts().map((p) => ({ id: p.id }));
-}
+  useEffect(() => {
+    async function load() {
+      try {
+        const p = await fetchDrug(params.id);
+        setProduct(p);
+      } catch {
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [params.id]);
 
-// 根据当前页面的id动态生成meta标签（浏览器标题栏+SEO）
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const product = getProductById(id);
-  if (!product) return { title: "Not Found" };
-  return {
-    title: `${product.brandName} (${product.genericNameEn})，ADC Panorama`,
-    description: `${product.brandName} 靶向 ${product.target}，${product.stage}。${product.indication.join("、")}`,
-  };
-}
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="cyber-card p-12 text-center">
+            <div className="w-8 h-8 mx-auto border-2 border-cyber-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        </main>
+      </>
+    );
+  }
 
-export default async function ProductPage({ params }: Props) {
-  const { id } = await params;
-  const product = getProductById(id);
-
-  // id不存在时，显示Next.js内置的404页面
   if (!product) notFound();
 
   return (
@@ -41,6 +48,7 @@ export default async function ProductPage({ params }: Props) {
       <Navbar />
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <ProductDetail product={product} />
+        <CommentSection drugId={product.id} />
       </main>
     </>
   );
