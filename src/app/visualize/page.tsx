@@ -1,6 +1,3 @@
-// 可视化图谱页面，独立的3D星球全屏视图
-// 首页已经嵌入了ForceGraph，这个页面作为深度浏览入口保留
-
 import { Metadata } from "next";
 import { getAllProducts } from "@/lib/data";
 import Navbar from "@/components/Navbar";
