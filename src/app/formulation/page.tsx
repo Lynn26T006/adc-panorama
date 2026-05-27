@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { fetchFormulation, fetchStats, type StatsResult, type ADCProduct } from "@/lib/api-client";
-import { classifyBuffer, classifyStabilizer, classifySurfactant } from "@/lib/data";
+import { classifyBuffer, classifyStabilizer, classifySurfactant } from "@/lib/classifiers";
 
 const PAGE_SIZE = 12;
 
@@ -31,17 +31,23 @@ function buildPages(current: number, total: number): (number | "...")[] {
 export default function FormulationPage() {
   const [allProducts, setAllProducts] = useState<ADCProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [stats, setStats] = useState<StatsResult | null>(null);
 
   useEffect(() => {
     async function load() {
-      const [formRes, statsRes] = await Promise.all([
-        fetchFormulation({ pageSize: 100 }),
-        fetchStats(),
-      ]);
-      setAllProducts(formRes.products);
-      setStats(statsRes);
-      setLoading(false);
+      try {
+        const [formRes, statsRes] = await Promise.all([
+          fetchFormulation({ pageSize: 100 }),
+          fetchStats(),
+        ]);
+        setAllProducts(formRes.products);
+        setStats(statsRes);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
@@ -158,6 +164,18 @@ export default function FormulationPage() {
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-cyber-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-sm text-cyber-text2">从数据库加载制剂数据...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-cyber-pink text-sm mb-2">数据加载失败</p>
+              <button
+                onClick={() => { setError(false); setLoading(true); window.location.reload(); }}
+                className="text-xs px-4 py-1.5 rounded-lg border border-cyber-accent/40 text-cyber-accent hover:bg-cyber-accent/10 transition-all"
+              >
+                重新加载
+              </button>
             </div>
           </div>
         ) : (

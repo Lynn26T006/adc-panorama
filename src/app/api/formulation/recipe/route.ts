@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { drugs } from "@/lib/db/schema";
+import { drugs, recipeGenerations } from "@/lib/db/schema";
 import { and, isNotNull, or, like } from "drizzle-orm";
-import mysql from "mysql2/promise";
 
-const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 3 });
-
-// 分类映射（用于 LIKE 查询）
 const CLASS_TO_KEYWORDS: Record<string, string[]> = {
   "柠檬酸盐": ["柠檬酸钠", "柠檬酸"],
   "琥珀酸盐": ["琥珀酸钠", "琥珀酸"],
@@ -24,7 +20,7 @@ const CLASS_TO_KEYWORDS: Record<string, string[]> = {
   "聚山梨酯20": ["聚山梨酯20", "Polysorbate 20", "Tween 20", "吐温20"],
 };
 
-function buildLikeClause(field: any, classification: string | null) {
+function classToLikeClause(field: any, classification: string | null) {
   if (!classification || !CLASS_TO_KEYWORDS[classification]) return undefined;
   const keywords = CLASS_TO_KEYWORDS[classification];
   return or(...keywords.map((kw: string) => like(field, `%${kw}%`)));
@@ -40,7 +36,6 @@ export async function GET(request: NextRequest) {
     const ph = searchParams.get("ph") || "";
     const storage = searchParams.get("storage") || "";
 
-    // 基础条件：只查有配方数据的产品
     const baseConditions = [
       or(
         isNotNull(drugs.lyoBuffer),
@@ -51,10 +46,9 @@ export async function GET(request: NextRequest) {
       ),
     ];
 
-    // 添加筛选条件
-    const bufCond = buildLikeClause(drugs.lyoBuffer, buffer);
-    const stabCond = buildLikeClause(drugs.lyoStabilizer, stabilizer);
-    const surfCond = buildLikeClause(drugs.lyoSurfactant, surfactant);
+    const bufCond = classToLikeClause(drugs.lyoBuffer, buffer);
+    const stabCond = classToLikeClause(drugs.lyoStabilizer, stabilizer);
+    const surfCond = classToLikeClause(drugs.lyoSurfactant, surfactant);
 
     if (bufCond) baseConditions.push(bufCond);
     if (stabCond) baseConditions.push(stabCond);
@@ -71,22 +65,20 @@ export async function GET(request: NextRequest) {
       .orderBy(drugs.id)
       .limit(100);
 
-    // 聚合配方
-    const aggregate = aggregateRecipe(results);
+    const aggregate = aggregateRecipe(results as any[]);
 
-    // 保存配方生成记录（仅登录用户）
     const session = await auth().catch(() => null);
     if (session?.user) {
       const userId = (session.user as any).id;
-      const resultIds = results.map((r: any) => r.id).slice(0, 50);
-      await pool.query(
-        "INSERT INTO recipe_generations (user_id, parameters, result_ids) VALUES (?, ?, ?)",
-        [
+      const resultIds = results.map((r) => r.id).slice(0, 50);
+      await db
+        .insert(recipeGenerations)
+        .values({
           userId,
-          JSON.stringify({ buffer, stabilizer, surfactant, ph, storage }),
-          JSON.stringify(resultIds),
-        ]
-      ).catch(() => { /* 静默失败，不影响主流程 */ });
+          parameters: { buffer, stabilizer, surfactant, ph, storage },
+          resultIds,
+        })
+        .catch(() => { /* silent */ });
     }
 
     return NextResponse.json({
