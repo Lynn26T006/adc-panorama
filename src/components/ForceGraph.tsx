@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ADCProduct } from "@/lib/types";
+import { fetchDrugs } from "@/lib/api-client";
 
 const STAGE_LABEL: Record<string, string> = {
   "已上市": "已上市",
@@ -23,9 +24,9 @@ const STAGE_CONFIG: Record<string, { clr: string; sz: number; lat: [number, numb
   "IND": { clr: "#ff6ec7", sz: 0.02, lat: [-90, -55] },
 };
 
-interface Props { products: ADCProduct[]; }
+interface Props { products?: ADCProduct[]; }
 
-export default function ForceGraph({ products }: Props) {
+export default function ForceGraph({ products: initialProducts }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const threeScene = useRef<THREE.Scene | null>(null);
   const orbitCtrl = useRef<OrbitControls | null>(null);
@@ -33,6 +34,25 @@ export default function ForceGraph({ products }: Props) {
   const [hovered, setHovered] = useState<ADCProduct | null>(null);
   const [picked, setPicked] = useState<ADCProduct | null>(null);
   const [tipXY, setTipXY] = useState({ x: 0, y: 0 });
+  const [products, setProducts] = useState<ADCProduct[]>(initialProducts || []);
+  const [loading, setLoading] = useState(!initialProducts);
+
+  const loadProducts = useCallback(async () => {
+    if (initialProducts?.length) return;
+    try {
+      setLoading(true);
+      const res = await fetchDrugs({ pageSize: 9999 });
+      setProducts(res.products);
+    } catch {
+      // keep empty
+    } finally {
+      setLoading(false);
+    }
+  }, [initialProducts]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   // 只展示有品牌名、非终止、且在六个目标阶段内的药物
   const visible = useMemo(
@@ -256,7 +276,16 @@ export default function ForceGraph({ products }: Props) {
 
   return (
     <div className="relative w-full" style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}>
-      <div ref={boxRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border" />
+      <div ref={boxRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border">
+        {loading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-cyber-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-cyber-text2">加载星球图谱...</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {hovered && !picked && (
         <div className="fixed z-50 bg-black/85 border border-cyber-border rounded-lg px-3 py-2 text-sm pointer-events-none backdrop-blur-xl"

@@ -90,7 +90,7 @@ export default function HomePage() {
 
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
           <div className="cyber-card overflow-hidden">
-            <ForceGraph products={allProducts} />
+            <ForceGraph />
           </div>
         </section>
 

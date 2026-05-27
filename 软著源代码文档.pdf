@@ -1,0 +1,3174 @@
+============================================================
+  ADC Panorama 全景数据库系统  V1.0
+  源代码文档（前1500行 + 后1500行）
+  文件总数: 53 个
+  源代码总行数: 5804 行
+  提交行数: 3000 行
+  页数: 60 页 (每页50行)
+============================================================
+
+────────────────────────────────────────────────────────────
+  第一部分：源代码前 1500 行
+────────────────────────────────────────────────────────────
+ADC Panorama 全景数据库系统  V1.0    第 1 页
+
+
+// ==== src/lib/types.ts ====
+export interface ADCProduct {
+  id: string;
+  genericNameEn: string;
+  genericNameCn: string;
+  brandName: string;
+  target: string;
+  antibody: string;
+  antibodySubclass: string;
+  indication: string[];
+  stage: string;
+  companyOriginator: string;
+  companyLicensee: string;
+  approvalYear: number | null;
+  approvalRegions: string[];
+
+  payloadName: string;
+  payloadClass: string;
+  payloadMechanism: string;
+  linkerName: string;
+  linkerType: string;
+  linkerStructure: string;
+
+  conjugationMethod: string;
+  conjugationSite: string;
+  conjugationChemistry: string;
+  dar: string;
+  darDistribution: string;
+  purificationMethod: string;
+
+  dosageForm: string;
+  lyophilization: boolean;
+  lyoExcipientsBuffer: string;
+  lyoExcipientsStabilizer: string;
+  lyoExcipientsSurfactant: string;
+  lyoPh: string;
+  lyoPreConc: string;
+  lyoPostConc: string;
+  lyoCycle: string;
+  reconstitutionMedia: string;
+  liquidExcipients: string;
+  storageCondition: string;
+  shelfLife: string;
+  containerClosure: string;
+
+  purityMethod: string;
+  potencyMethod: string;
+  criticalQualityAttrs: string;
+
+  cellLine: string;
+ADC Panorama 全景数据库系统  V1.0    第 2 页
+
+  antibodySequenceHeavy: string;
+  antibodySequenceLight: string;
+  signalPeptide: string;
+  plasmidInfo: string;
+
+  payloadSmiles: string;
+  payloadStructure: string;
+
+  pdbId: string;
+  manufacturer: string;
+
+  patentNumber: string;
+  patentTitle: string;
+  patentAssignee: string;
+  patentFilingDate: string;
+  patentExpiry: string;
+  referenceLabel: string;
+  referenceUrl: string;
+  lastUpdated: string;
+  notes: string;
+}
+
+export type StageFilter =
+  | "已上市"
+  | "NDA"
+  | "临床III期"
+  | "临床II期"
+  | "临床I期"
+  | "IND";
+
+export type SortField = "brandName" | "target" | "stage" | "approvalYear" | "conjugationMethod";
+export type SortOrder = "asc" | "desc";
+
+// ==== src/lib/db/schema.ts ====
+import {
+  mysqlTable,
+  serial,
+  varchar,
+  text,
+  int,
+  boolean,
+  json,
+  char,
+  timestamp,
+  uniqueIndex,
+  index,
+  mysqlEnum,
+} from "drizzle-orm/mysql-core";
+
+const userRoleValues = ["user", "editor", "admin"] as const;
+const submissionStatusValues = ["pending", "approved", "rejected"] as const;
+ADC Panorama 全景数据库系统  V1.0    第 3 页
+
+
+export const drugs = mysqlTable(
+  "drugs",
+  {
+    id: serial("id").primaryKey(),
+    adcdbId: varchar("adcdb_id", { length: 20 }).unique(),
+    antibody: varchar("antibody", { length: 300 }).notNull(),
+    brandName: varchar("brand_name", { length: 200 }),
+    genericCn: varchar("generic_cn", { length: 300 }),
+    antibodySubclass: varchar("antibody_subclass", { length: 50 }),
+    target: varchar("target", { length: 200 }),
+    stage: varchar("stage", { length: 50 }),
+    indication: json("indication"),
+    approvalYear: int("approval_year"),
+    approvalRegions: json("approval_regions"),
+
+    payloadName: varchar("payload_name", { length: 200 }),
+    payloadClass: varchar("payload_class", { length: 100 }),
+    payloadMechanism: varchar("payload_mechanism", { length: 300 }),
+    linkerName: text("linker_name"),
+    linkerType: varchar("linker_type", { length: 100 }),
+    linkerStructure: text("linker_structure"),
+    conjugationMethod: text("conjugation_method"),
+    conjugationSite: text("conjugation_site"),
+    conjugationChemistry: varchar("conjugation_chemistry", { length: 300 }),
+    dar: varchar("dar", { length: 50 }),
+    darDistribution: varchar("dar_distribution", { length: 200 }),
+    purificationMethod: varchar("purification_method", { length: 200 }),
+
+    dosageForm: varchar("dosage_form", { length: 100 }),
+    lyophilization: boolean("lyophilization").default(false),
+    lyoBuffer: text("lyo_buffer"),
+    lyoStabilizer: text("lyo_stabilizer"),
+    lyoSurfactant: text("lyo_surfactant"),
+    lyoPh: varchar("lyo_ph", { length: 20 }),
+    lyoCycle: text("lyo_cycle"),
+    lyoPreConc: varchar("lyo_pre_conc", { length: 100 }),
+    lyoPostConc: varchar("lyo_post_conc", { length: 100 }),
+    reconstitutionMedia: varchar("reconstitution_media", { length: 200 }),
+    liquidExcipients: text("liquid_excipients"),
+    storageCondition: varchar("storage_condition", { length: 200 }),
+    shelfLife: varchar("shelf_life", { length: 50 }),
+    containerClosure: varchar("container_closure", { length: 200 }),
+
+    purityMethod: varchar("purity_method", { length: 200 }),
+    potencyMethod: varchar("potency_method", { length: 200 }),
+    criticalQualityAttrs: text("critical_quality_attrs"),
+
+    payloadSmiles: text("payload_smiles"),
+    payloadStructure: text("payload_structure"),
+ADC Panorama 全景数据库系统  V1.0    第 4 页
+
+    pdbId: varchar("pdb_id", { length: 20 }),
+    heavyChainSeq: text("heavy_chain_seq"),
+    lightChainSeq: text("light_chain_seq"),
+    cellLine: varchar("cell_line", { length: 100 }),
+
+    companyOriginator: varchar("company_originator", { length: 300 }),
+    companyLicensee: varchar("company_licensee", { length: 300 }),
+    manufacturer: varchar("manufacturer", { length: 300 }),
+    patentNumber: text("patent_number"),
+    patentTitle: text("patent_title"),
+    patentAssignee: varchar("patent_assignee", { length: 200 }),
+    patentFilingDate: varchar("patent_filing_date", { length: 50 }),
+    patentExpiry: varchar("patent_expiry", { length: 50 }),
+
+    referenceLabel: varchar("reference_label", { length: 200 }),
+    referenceUrl: varchar("reference_url", { length: 500 }),
+    notes: text("notes"),
+    lastUpdated: varchar("last_updated", { length: 50 }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_drugs_stage").on(table.stage),
+    index("idx_drugs_target").on(table.target),
+    index("idx_drugs_payload_class").on(table.payloadClass),
+    index("idx_drugs_lyophilization").on(table.lyophilization),
+    index("idx_drugs_antibody").on(table.antibody),
+    index("idx_drugs_brand").on(table.brandName),
+  ]
+);
+
+export const users = mysqlTable("users", {
+  id: char("id", { length: 36 }).primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 100 }),
+  avatarUrl: text("avatar_url"),
+  role: mysqlEnum("role", userRoleValues).default("user"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const bookmarks = mysqlTable(
+  "bookmarks",
+  {
+    id: serial("id").primaryKey(),
+    userId: char("user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    drugId: int("drug_id")
+      .notNull()
+      .references(() => drugs.id, { onDelete: "cascade" }),
+ADC Panorama 全景数据库系统  V1.0    第 5 页
+
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [uniqueIndex("idx_bookmarks_user_drug").on(table.userId, table.drugId)]
+);
+
+export const comments = mysqlTable(
+  "comments",
+  {
+    id: serial("id").primaryKey(),
+    userId: char("user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    drugId: int("drug_id")
+      .notNull()
+      .references(() => drugs.id, { onDelete: "cascade" }),
+    parentId: int("parent_id"),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_comments_drug").on(table.drugId),
+    index("idx_comments_user").on(table.userId),
+  ]
+);
+
+export const recipeGenerations = mysqlTable("recipe_generations", {
+  id: serial("id").primaryKey(),
+  userId: char("user_id", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
+  parameters: json("parameters").notNull(),
+  resultIds: json("result_ids"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dataChangelog = mysqlTable(
+  "data_changelog",
+  {
+    id: serial("id").primaryKey(),
+    drugId: int("drug_id").references(() => drugs.id, { onDelete: "set null" }),
+    userId: char("user_id", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
+    field: varchar("field", { length: 100 }),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    source: varchar("source", { length: 100 }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("idx_changelog_drug").on(table.drugId)]
+);
+
+ADC Panorama 全景数据库系统  V1.0    第 6 页
+
+export const submissions = mysqlTable(
+  "submissions",
+  {
+    id: serial("id").primaryKey(),
+    userId: char("user_id", { length: 36 }).references(() => users.id, { onDelete: "cascade" }),
+    drugName: varchar("drug_name", { length: 300 }),
+    fieldData: json("field_data").notNull(),
+    status: mysqlEnum("status", submissionStatusValues).default("pending"),
+    reviewerId: char("reviewer_id", { length: 36 }),
+    reviewNote: text("review_note"),
+    createdAt: timestamp("created_at").defaultNow(),
+    reviewedAt: timestamp("reviewed_at"),
+  },
+  (table) => [index("idx_submissions_status").on(table.status)]
+);
+
+export const notifications = mysqlTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: char("user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }),
+    title: varchar("title", { length: 200 }),
+    body: text("body"),
+    link: varchar("link", { length: 500 }),
+    read: boolean("read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_notifications_user").on(table.userId),
+    index("idx_notifications_unread").on(table.read),
+  ]
+);
+
+export type Drug = typeof drugs.$inferSelect;
+export type NewDrug = typeof drugs.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type Comment = typeof comments.$inferSelect;
+export type RecipeGeneration = typeof recipeGenerations.$inferSelect;
+export type ChangelogEntry = typeof dataChangelog.$inferSelect;
+export type Submission = typeof submissions.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+
+// ==== src/lib/db/index.ts ====
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import * as schema from "./schema";
+
+ADC Panorama 全景数据库系统  V1.0    第 7 页
+
+let cachedDb: ReturnType<typeof drizzle> | null = null;
+
+export async function getDb() {
+  if (cachedDb) return cachedDb;
+
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is required");
+
+  const pool = mysql.createPool({ uri: url, connectionLimit: 10 });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cachedDb = drizzle(pool as any, { schema, mode: "default" });
+  return cachedDb;
+}
+
+export { schema };
+
+// ==== src/lib/data.ts ====
+import { ADCProduct } from "./types";
+import sourceData from "../../data/adc_products.json";
+
+const store: ADCProduct[] = sourceData as ADCProduct[];
+
+export function getAllProducts(): ADCProduct[] {
+  return store;
+}
+
+export function getProductById(id: string): ADCProduct | undefined {
+  return store.find((d) => d.id === id);
+}
+
+// 去重排序
+export function getProductTargets(): string[] {
+  return [...new Set(store.map((d) => d.target))].sort();
+}
+
+export function getProductStages(): string[] {
+  const raw = [...new Set(store.map((d) => d.stage))].sort();
+  return ["临床阶段", ...raw];
+}
+
+export function getProductCompanies(): string[] {
+  const flat = store.flatMap((d) => [
+    d.companyOriginator,
+    ...(d.companyLicensee ? d.companyLicensee.split("/") : []),
+  ]);
+  return [...new Set(flat.map((c) => c.trim()).filter(Boolean))].sort();
+}
+
+export function getProductIndications(): string[] {
+  return [...new Set(store.flatMap((d) => d.indication))].sort();
+}
+ADC Panorama 全景数据库系统  V1.0    第 8 页
+
+
+export function getConjugationMethods(): string[] {
+  return [...new Set(store.map((d) => d.conjugationMethod))].sort();
+}
+
+export function getPayloadClasses(): string[] {
+  return [...new Set(store.map((d) => d.payloadClass))].sort();
+}
+
+export function getLinkerTypes(): string[] {
+  return [...new Set(store.map((d) => d.linkerType))].sort();
+}
+
+export interface FilterParams {
+  search?: string;
+  stage?: string;
+  target?: string;
+  indication?: string;
+  company?: string;
+  conjugationMethod?: string;
+  payloadClass?: string;
+  linkerType?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaginatedResult {
+  products: ADCProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export function getProductsWithFormulation(): ADCProduct[] {
+  return store.filter(p =>
+    p.dosageForm ||
+    p.lyoExcipientsBuffer ||
+    p.lyoExcipientsStabilizer ||
+    p.lyoExcipientsSurfactant ||
+    p.lyoPh ||
+    p.lyoCycle ||
+    p.storageCondition ||
+    p.shelfLife ||
+    p.liquidExcipients
+  );
+}
+
+ADC Panorama 全景数据库系统  V1.0    第 9 页
+
+export function getDosageForms(): string[] {
+  return [...new Set(store.map(p => p.dosageForm).filter(Boolean))].sort();
+}
+
+export function getLyoPhValues(): string[] {
+  return [...new Set(store.map(p => p.lyoPh).filter(Boolean))].sort();
+}
+
+export function getStorageConditions(): string[] {
+  return [...new Set(store.map(p => p.storageCondition).filter(Boolean))].sort();
+}
+
+const BUFFER_CLASS_MAP: Record<string, string> = {
+  "柠檬酸钠": "柠檬酸盐",
+  "柠檬酸": "柠檬酸",
+  "琥珀酸钠": "琥珀酸盐",
+  "Tris": "Tris",
+  "组氨酸": "L-组氨酸",
+  "MES": "MES",
+  "磷酸": "磷酸盐",
+  "甘氨酸": "甘氨酸",
+};
+
+export function classifyBuffer(raw: string): string {
+  if (!raw) return "";
+  for (const [key, label] of Object.entries(BUFFER_CLASS_MAP)) {
+    if (raw.includes(key)) return label;
+  }
+  return raw.split(" ")[0].split(";")[0].trim();
+}
+
+const STABILIZER_CLASS_MAP: Record<string, string> = {
+  "海藻糖": "海藻糖",
+  "蔗糖": "蔗糖",
+  "甘露醇": "甘露醇",
+  "D-甘露醇": "甘露醇",
+  "氯化钠": "氯化钠",
+  "右旋糖酐": "右旋糖酐",
+  "聚山梨酯20": "聚山梨酯20",
+  "聚山梨酯80": "聚山梨酯80",
+};
+
+export function classifyStabilizer(raw: string): string {
+  if (!raw) return "";
+  for (const [key, label] of Object.entries(STABILIZER_CLASS_MAP)) {
+    if (raw.includes(key)) return label;
+  }
+  return raw.split(" ")[0].split(";")[0].trim();
+}
+
+ADC Panorama 全景数据库系统  V1.0    第 10 页
+
+const SURFACTANT_CLASS_MAP: Record<string, string> = {
+  "聚山梨酯80": "聚山梨酯80",
+  "聚山梨酯20": "聚山梨酯20",
+  "Polysorbate 80": "聚山梨酯80",
+  "Polysorbate 20": "聚山梨酯20",
+  "吐温80": "聚山梨酯80",
+  "吐温20": "聚山梨酯20",
+};
+
+export function classifySurfactant(raw: string): string {
+  if (!raw) return "";
+  for (const [key, label] of Object.entries(SURFACTANT_CLASS_MAP)) {
+    if (raw.includes(key)) return label;
+  }
+  return raw.split(" ")[0].split(";")[0].trim().replace(/,$/, "");
+}
+
+export function getBufferClasses(): string[] {
+  return [...new Set(
+    store.map(p => classifyBuffer(p.lyoExcipientsBuffer)).filter(Boolean)
+  )].sort();
+}
+
+export function getStabilizerClasses(): string[] {
+  return [...new Set(
+    store.map(p => classifyStabilizer(p.lyoExcipientsStabilizer)).filter(Boolean)
+  )].sort();
+}
+
+export function getSurfactantClasses(): string[] {
+  return [...new Set(
+    store.map(p => classifySurfactant(p.lyoExcipientsSurfactant)).filter(Boolean)
+  )].sort();
+}
+
+export function filterAndPaginate(params: FilterParams): PaginatedResult {
+  let pool = [...store];
+
+  // 关键词搜索，匹配商品名、通用名、靶点、适应症、公司
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const wordRe = new RegExp(`\\b${escaped}\\b`, "i");
+    // 排除否定语境：HER2- / HER2-low / HER2阴性 不应匹配 "HER2"
+    const negRe = new RegExp(`${escaped}\\s*[-阴性]|${escaped}\\s*low|${escaped}\\s*negative`, "i");
+    pool = pool.filter(
+      (d) =>
+        d.brandName.toLowerCase().includes(q) ||
+        d.genericNameEn.toLowerCase().includes(q) ||
+        d.genericNameCn.toLowerCase().includes(q) ||
+ADC Panorama 全景数据库系统  V1.0    第 11 页
+
+        d.target.toLowerCase().includes(q) ||
+        d.indication.some((ind) => wordRe.test(ind) && !negRe.test(ind)) ||
+        d.companyOriginator.toLowerCase().includes(q) ||
+        (d.companyLicensee || "").toLowerCase().includes(q)
+    );
+  }
+
+  if (params.stage) {
+    let stages = params.stage.split(",");
+    // "临床阶段"是个虚拟标签，展开成所有临床试验阶段
+    if (stages.includes("临床阶段")) {
+      stages = stages.filter(s => s !== "临床阶段");
+      stages.push("临床I期", "临床II期", "临床III期", "NDA",
+        "临床I期 (终止)", "临床II期 (终止)", "临床III期 (终止)");
+    }
+    pool = pool.filter((d) => stages.includes(d.stage));
+  }
+
+  if (params.target) {
+    const targets = params.target.split(",");
+    pool = pool.filter((d) => targets.includes(d.target));
+  }
+
+  if (params.indication) {
+    const inds = params.indication.split(",");
+    pool = pool.filter((d) => d.indication.some((i) => inds.some((fi) => i.includes(fi))));
+  }
+
+  if (params.company) {
+    const cos = params.company.split(",");
+    pool = pool.filter(
+      (d) =>
+        cos.some((c) => d.companyOriginator.includes(c)) ||
+        cos.some((c) => (d.companyLicensee || "").includes(c))
+    );
+  }
+
+  if (params.conjugationMethod) {
+    const methods = params.conjugationMethod.split(",");
+    pool = pool.filter((d) => methods.includes(d.conjugationMethod));
+  }
+
+  if (params.payloadClass) {
+    const classes = params.payloadClass.split(",");
+    pool = pool.filter((d) => classes.includes(d.payloadClass));
+  }
+
+  if (params.linkerType) {
+    const types = params.linkerType.split(",");
+    pool = pool.filter((d) => types.includes(d.linkerType));
+ADC Panorama 全景数据库系统  V1.0    第 12 页
+
+  }
+
+  // 排序
+  if (params.sort) {
+    const dir = params.order === "desc" ? -1 : 1;
+    pool.sort((a, b) => {
+      const va = a[params.sort as keyof ADCProduct];
+      const vb = b[params.sort as keyof ADCProduct];
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") {
+        return (va - vb) * dir;
+      }
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+  }
+
+  const pg = params.page || 1;
+  const sz = params.pageSize || 15;
+  const total = pool.length;
+  const totalPages = Math.ceil(total / sz);
+  const start = (pg - 1) * sz;
+
+  return { products: pool.slice(start, start + sz), total, page: pg, pageSize: sz, totalPages };
+}
+
+// ==== src/lib/api-client.ts ====
+import type { ADCProduct } from "./types";
+
+export type { ADCProduct };
+
+const BASE = "";
+
+export interface DrugRow {
+  id: number;
+  adcdbId: string | null;
+  antibody: string;
+  brandName: string | null;
+  genericCn: string | null;
+  antibodySubclass: string | null;
+  target: string | null;
+  stage: string | null;
+  indication: string[] | null;
+  approvalYear: number | null;
+  approvalRegions: string[] | null;
+  lyophilization: boolean | null;
+  dosageForm: string | null;
+  lyoBuffer: string | null;
+  lyoStabilizer: string | null;
+  lyoSurfactant: string | null;
+ADC Panorama 全景数据库系统  V1.0    第 13 页
+
+  lyoPh: string | null;
+  lyoCycle: string | null;
+  lyoPreConc: string | null;
+  lyoPostConc: string | null;
+  reconstitutionMedia: string | null;
+  liquidExcipients: string | null;
+  storageCondition: string | null;
+  shelfLife: string | null;
+  containerClosure: string | null;
+  payloadClass: string | null;
+  payloadName: string | null;
+  payloadMechanism: string | null;
+  linkerName: string | null;
+  linkerType: string | null;
+  linkerStructure: string | null;
+  conjugationMethod: string | null;
+  conjugationSite: string | null;
+  conjugationChemistry: string | null;
+  dar: string | null;
+  darDistribution: string | null;
+  purificationMethod: string | null;
+  purityMethod: string | null;
+  potencyMethod: string | null;
+  criticalQualityAttrs: string | null;
+  companyOriginator: string | null;
+  companyLicensee: string | null;
+  manufacturer: string | null;
+  payloadSmiles: string | null;
+  payloadStructure: string | null;
+  pdbId: string | null;
+  heavyChainSeq: string | null;
+  lightChainSeq: string | null;
+  cellLine: string | null;
+  patentNumber: string | null;
+  patentTitle: string | null;
+  patentAssignee: string | null;
+  patentFilingDate: string | null;
+  patentExpiry: string | null;
+  referenceLabel: string | null;
+  referenceUrl: string | null;
+  notes: string | null;
+  lastUpdated: string | null;
+  [key: string]: unknown;
+}
+
+export function normalizeDrug(row: DrugRow): ADCProduct {
+  return {
+    id: String(row.id),
+    genericNameEn: "", // 数据库未存储，从antibody提取或留空
+    genericNameCn: row.genericCn || "",
+ADC Panorama 全景数据库系统  V1.0    第 14 页
+
+    brandName: row.brandName || "",
+    target: row.target || "",
+    antibody: row.antibody || "",
+    antibodySubclass: row.antibodySubclass || "",
+    indication: row.indication || [],
+    stage: row.stage || "",
+    companyOriginator: row.companyOriginator || "",
+    companyLicensee: row.companyLicensee || "",
+    approvalYear: row.approvalYear,
+    approvalRegions: row.approvalRegions || [],
+    payloadName: row.payloadName || "",
+    payloadClass: row.payloadClass || "",
+    payloadMechanism: row.payloadMechanism || "",
+    linkerName: row.linkerName || "",
+    linkerType: row.linkerType || "",
+    linkerStructure: row.linkerStructure || "",
+    conjugationMethod: row.conjugationMethod || "",
+    conjugationSite: row.conjugationSite || "",
+    conjugationChemistry: row.conjugationChemistry || "",
+    dar: row.dar || "",
+    darDistribution: row.darDistribution || "",
+    purificationMethod: row.purificationMethod || "",
+    dosageForm: row.dosageForm || "",
+    lyophilization: row.lyophilization ?? false,
+    lyoExcipientsBuffer: row.lyoBuffer || "",
+    lyoExcipientsStabilizer: row.lyoStabilizer || "",
+    lyoExcipientsSurfactant: row.lyoSurfactant || "",
+    lyoPh: row.lyoPh || "",
+    lyoPreConc: row.lyoPreConc || "",
+    lyoPostConc: row.lyoPostConc || "",
+    lyoCycle: row.lyoCycle || "",
+    reconstitutionMedia: row.reconstitutionMedia || "",
+    liquidExcipients: row.liquidExcipients || "",
+    storageCondition: row.storageCondition || "",
+    shelfLife: row.shelfLife || "",
+    containerClosure: row.containerClosure || "",
+    purityMethod: row.purityMethod || "",
+    potencyMethod: row.potencyMethod || "",
+    criticalQualityAttrs: row.criticalQualityAttrs || "",
+    cellLine: row.cellLine || "",
+    antibodySequenceHeavy: row.heavyChainSeq || "",
+    antibodySequenceLight: row.lightChainSeq || "",
+    signalPeptide: "",
+    plasmidInfo: "",
+    payloadSmiles: row.payloadSmiles || "",
+    payloadStructure: row.payloadStructure || "",
+    pdbId: row.pdbId || "",
+    manufacturer: row.manufacturer || "",
+    patentNumber: row.patentNumber || "",
+    patentTitle: row.patentTitle || "",
+ADC Panorama 全景数据库系统  V1.0    第 15 页
+
+    patentAssignee: row.patentAssignee || "",
+    patentFilingDate: row.patentFilingDate || "",
+    patentExpiry: row.patentExpiry || "",
+    referenceLabel: row.referenceLabel || "",
+    referenceUrl: row.referenceUrl || "",
+    lastUpdated: row.lastUpdated || "",
+    notes: row.notes || "",
+  };
+}
+
+export interface PaginatedResult {
+  products: ADCProduct[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface StatsResult {
+  totalDrugs: number;
+  withFormulation: number;
+  lyophilized: number;
+  approved: number;
+  topTargets: { name: string; count: number }[];
+}
+
+export interface FormulationResult {
+  products: ADCProduct[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
+// ---- Drugs API ----
+
+export async function fetchDrugs(params: {
+  search?: string;
+  stage?: string;
+  target?: string;
+  payloadClass?: string;
+  conjugationMethod?: string;
+  sort?: string;
+  order?: string;
+  page?: number;
+ADC Panorama 全景数据库系统  V1.0    第 16 页
+
+  pageSize?: number;
+} = {}): Promise<PaginatedResult> {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") q.set(k, String(v));
+  });
+  const raw = await fetchJson<{ products: DrugRow[]; total: number; page: number; pageSize: number; totalPages: number }>(`${BASE}/api/drugs?${q.toString()}`);
+  return { ...raw, products: raw.products.map(normalizeDrug) };
+}
+
+export async function fetchDrug(id: string): Promise<ADCProduct> {
+  const raw = await fetchJson<DrugRow>(`${BASE}/api/drugs/${id}`);
+  return normalizeDrug(raw);
+}
+
+// ---- Formulation API ----
+
+export async function fetchFormulation(params: {
+  dosage?: string;
+  buffer?: string;
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<FormulationResult> {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") q.set(k, String(v));
+  });
+  const raw = await fetchJson<{ products: DrugRow[]; page: number; pageSize: number; total: number }>(`${BASE}/api/formulation?${q.toString()}`);
+  return { ...raw, products: raw.products.map(normalizeDrug) };
+}
+
+// ---- Stats API ----
+
+export async function fetchStats(): Promise<StatsResult> {
+  return fetchJson(`${BASE}/api/stats`);
+}
+
+// ---- Static helpers (for client-side filter options) ----
+// These are small enough to keep in-memory after first fetch
+let cachedTargets: string[] | null = null;
+let cachedPayloadClasses: string[] | null = null;
+let cachedConjugationMethods: string[] | null = null;
+
+export async function fetchTargets(): Promise<string[]> {
+  if (cachedTargets) return cachedTargets;
+  const { products } = await fetchDrugs({ pageSize: 1 });
+  // Get from stats endpoint or a dedicated filter endpoint
+  // For now, fetch a sample page and cache isn't perfect
+  return cachedTargets || [];
+}
+ADC Panorama 全景数据库系统  V1.0    第 17 页
+
+
+// ==== src/lib/auth.ts ====
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    Credentials({
+      name: "credentials",
+      credentials: {
+        email: { label: "邮箱", type: "email" },
+        password: { label: "密码", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const email = String(credentials.email).toLowerCase().trim();
+        const password = String(credentials.password);
+
+        const [rows] = await pool.query(
+          "SELECT id, email, password_hash, display_name, role FROM users WHERE email = ?",
+          [email]
+        ) as [any[], any];
+
+        if (rows.length === 0) return null;
+
+        const user = rows[0];
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.display_name,
+          role: user.role,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as any).role;
+ADC Panorama 全景数据库系统  V1.0    第 18 页
+
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/login",
+  },
+  session: {
+    strategy: "jwt",
+  },
+});
+
+// ==== src/components/Providers.tsx ====
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+
+export default function Providers({ children }: { children: React.ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>;
+}
+
+// ==== src/components/ClickableField.tsx ====
+"use client";
+
+import Link from "next/link";
+
+type FieldProps = {
+  value: string;
+  href?: string;
+  external?: boolean;
+  className?: string;
+  badge?: boolean;
+  color?: "accent" | "green" | "pink" | "orange" | "purple" | "default";
+};
+
+// 每个颜色对应一套cyber风格的边框和文字样式
+const palette = {
+  accent: "border-cyber-accent/50 text-cyber-accent hover:border-cyber-accent hover:text-cyber-accent",
+  green: "border-cyber-green/50 text-cyber-green hover:border-cyber-green hover:text-cyber-green",
+  pink: "border-cyber-pink/50 text-cyber-pink hover:border-cyber-pink hover:text-cyber-pink",
+  orange: "border-cyber-orange/50 text-cyber-orange hover:border-cyber-orange hover:text-cyber-orange",
+  purple: "border-cyber-accent2/50 text-cyber-accent2 hover:border-cyber-accent2 hover:text-cyber-accent2",
+  default: "border-cyber-border text-cyber-text2 hover:border-cyber-accent/50 hover:text-cyber-text",
+};
+
+ADC Panorama 全景数据库系统  V1.0    第 19 页
+
+export default function ClickableField({
+  value,
+  href,
+  external,
+  className = "",
+  badge = true,
+  color = "default",
+}: FieldProps) {
+  // 没有实质内容就直接显示灰色占位符
+  if (!value || value === "未公开" || value === "-" || value === "") {
+    return <span className="text-cyber-text2/50 text-sm">{value || "-"}</span>;
+  }
+
+  const style = badge
+    ? `cyber-badge ${palette[color]}`
+    : `text-sm transition-all duration-200 cursor-pointer hover:text-cyber-accent hover:underline decoration-cyber-accent/50 underline-offset-4 ${palette[color]}`;
+
+  // 外链场景，新标签页打开，带个小箭头图标
+  if (external && href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${style} ${className}`}
+      >
+        {value}
+        <svg className="w-3 h-3 ml-1 inline opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+        </svg>
+      </a>
+    );
+  }
+
+  // 内部路由跳转
+  if (href) {
+    return (
+      <Link href={href} className={`${style} ${className}`}>
+        {value}
+      </Link>
+    );
+  }
+
+  // 纯文本展示，不可点击
+  return <span className={`${style} ${className} cursor-default`}>{value}</span>;
+}
+
+// ==== src/components/SearchBar.tsx ====
+"use client";
+
+import { useRouter } from "next/navigation";
+ADC Panorama 全景数据库系统  V1.0    第 20 页
+
+import { useState } from "react";
+
+type SearchProps = {
+  placeholder?: string;
+};
+
+export default function SearchBar({ placeholder = "搜索 ADC 药物、靶点、公司、适应症..." }: SearchProps) {
+  const router = useRouter();
+  const [keyword, setKeyword] = useState("");
+
+  function runSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = keyword.trim();
+    if (q) {
+      router.push(`/products?search=${encodeURIComponent(q)}`);
+    } else {
+      router.push("/products");
+    }
+  }
+
+  return (
+    <form onSubmit={runSearch} className="relative w-full max-w-2xl">
+      <input
+        type="text"
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-cyber-card border border-cyber-border rounded-xl px-5 py-3 pl-11 text-sm text-cyber-text placeholder:text-cyber-text2/50 focus:outline-none focus:border-cyber-accent focus:shadow-[0_0_20px_rgba(0,229,255,0.15)] transition-all"
+      />
+      {/* 放大镜图标 */}
+      <svg
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-cyber-text2"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <button
+        type="submit"
+        className="absolute right-2 top-1/2 -translate-y-1/2 bg-cyber-accent hover:bg-cyan-400 text-cyber-bg font-bold text-xs px-4 py-1.5 rounded-lg transition-all hover:shadow-[0_0_15px_rgba(0,229,255,0.5)]"
+      >
+        搜索
+      </button>
+    </form>
+  );
+}
+
+// ==== src/components/StatsCards.tsx ====
+"use client";
+
+ADC Panorama 全景数据库系统  V1.0    第 21 页
+
+import Link from "next/link";
+
+type StatItem = {
+  title: string;
+  count: number;
+  suffix: string;
+  link: string;
+  grad: string;
+};
+
+type StatProps = {
+  drugCount: number;
+  targetCount: number;
+  approvedCount: number;
+  indCount: number;
+  clinicalCount: number;
+  companyCount: number;
+};
+
+function buildItems(p: StatProps): StatItem[] {
+  return [
+    { title: "ADC 产品", count: p.drugCount, suffix: "款", link: "/products", grad: "from-cyber-accent to-cyan-400" },
+    { title: "已上市", count: p.approvedCount, suffix: "款", link: "/products?stage=已上市", grad: "from-cyber-green to-green-300" },
+    { title: "IND 阶段", count: p.indCount, suffix: "款", link: "/products?stage=IND", grad: "from-cyber-pink to-pink-300" },
+    { title: "临床阶段", count: p.clinicalCount, suffix: "款", link: "/products?stage=临床III期", grad: "from-[#00e5ff] to-cyan-300" },
+    { title: "靶点", count: p.targetCount, suffix: "个", link: "/products?sort=target", grad: "from-cyber-orange to-yellow-300" },
+    { title: "开发公司", count: p.companyCount, suffix: "家", link: "/products?sort=companyOriginator", grad: "from-cyber-accent2 to-violet-300" },
+  ];
+}
+
+export default function StatsCards(props: StatProps) {
+  const entries = buildItems(props);
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {entries.map((e) => (
+        <Link
+          key={e.title}
+          href={e.link}
+          className="cyber-card p-4 text-center no-underline group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-current/5 rounded-2xl" />
+          <div className={`text-3xl font-extrabold bg-gradient-to-r ${e.grad} bg-clip-text text-transparent`}>
+            {e.count}
+          </div>
+          <div className="text-xs text-cyber-text2 mt-1 group-hover:text-cyber-text transition-colors">
+            {e.title}
+          </div>
+        </Link>
+      ))}
+ADC Panorama 全景数据库系统  V1.0    第 22 页
+
+    </div>
+  );
+}
+
+// ==== src/components/Pagination.tsx ====
+"use client";
+
+import { useState } from "react";
+
+interface Props {
+  totalPages: number;
+  currentPage: number;
+}
+
+export default function Pagination({ totalPages, currentPage }: Props) {
+  const [goTo, setGoTo] = useState("");
+  if (totalPages <= 1) return null;
+
+  function linkToPage(n: number) {
+    const q = new URLSearchParams(window.location.search);
+    q.set("page", String(n));
+    return `/products?${q.toString()}`;
+  }
+
+  function doJump() {
+    const target = parseInt(goTo);
+    if (target >= 1 && target <= totalPages) {
+      window.location.href = linkToPage(target);
+    }
+  }
+
+  const pageList: (number | "...")[] = [];
+  const wing = 2;
+  for (let idx = 1; idx <= totalPages; idx++) {
+    if (idx === 1 || idx === totalPages || (idx >= currentPage - wing && idx <= currentPage + wing)) {
+      pageList.push(idx);
+    } else if (pageList[pageList.length - 1] !== "...") {
+      pageList.push("...");
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+      {currentPage > 1 && (
+        <a href={linkToPage(currentPage - 1)}
+          className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline">
+          上一页
+        </a>
+      )}
+      {pageList.map((item, k) =>
+        item === "..." ? (
+ADC Panorama 全景数据库系统  V1.0    第 23 页
+
+          <span key={`dots-${k}`} className="px-2 text-cyber-text2/50">...</span>
+        ) : (
+          <a key={item} href={linkToPage(item)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all no-underline ${
+              item === currentPage
+                ? "bg-cyber-accent/20 text-cyber-accent border border-cyber-accent/50 glow-text"
+                : "text-cyber-text2 border border-transparent hover:border-cyber-border hover:text-cyber-text"
+            }`}>
+            {item}
+          </a>
+        )
+      )}
+      {currentPage < totalPages && (
+        <a href={linkToPage(currentPage + 1)}
+          className="px-3 py-1.5 rounded-lg text-sm text-cyber-text2 border border-cyber-border hover:border-cyber-accent hover:text-cyber-accent transition-all no-underline">
+          下一页
+        </a>
+      )}
+      {totalPages > 10 && (
+        <span className="flex items-center gap-1 text-xs text-cyber-text2/60 ml-2">
+          跳至
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={goTo}
+            onChange={(e) => setGoTo(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && doJump()}
+            placeholder={String(currentPage)}
+            className="w-16 px-2 py-1 rounded-md bg-cyber-bg border border-cyber-border text-cyber-text text-sm text-center focus:outline-none focus:border-cyber-accent"
+          />
+          / {totalPages} 页
+          <button onClick={doJump}
+            className="px-2 py-1 rounded-md text-xs border border-cyber-border text-cyber-text2 hover:text-cyber-accent hover:border-cyber-accent transition-all">
+            GO
+          </button>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ==== src/components/FilterPanel.tsx ====
+"use client";
+
+import { useCallback, useState } from "react";
+
+const FIRST_BATCH = 8; // 默认展开8个选项，超出的收起
+
+type GroupProps = {
+  title: string;
+ADC Panorama 全景数据库系统  V1.0    第 24 页
+
+  queryKey: string;
+  allOptions: string[];
+  picked: string[];
+  onPick: (key: string, val: string) => void;
+};
+
+function FilterGroup({ title, queryKey, allOptions, picked, onPick }: GroupProps) {
+  const [showAll, setShowAll] = useState(false);
+  if (allOptions.length === 0) return null;
+
+  const overflow = allOptions.length > FIRST_BATCH;
+  const visibleSet = showAll ? allOptions : allOptions.slice(0, FIRST_BATCH);
+
+  return (
+    <div>
+      <div className="text-xs font-semibold text-cyber-text2/70 uppercase tracking-wider mb-2">
+        {title}
+        {overflow && <span className="text-cyber-text2/40 ml-1">({allOptions.length})</span>}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {visibleSet.map((val) => {
+          const on = picked.includes(val);
+          return (
+            <button
+              key={val}
+              onClick={() => onPick(queryKey, val)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                on
+                  ? "bg-cyber-accent/15 border-cyber-accent/60 text-cyber-accent"
+                  : "border-cyber-border/50 text-cyber-text2/70 hover:border-cyber-border hover:text-cyber-text"
+              }`}
+            >
+              {val}
+            </button>
+          );
+        })}
+        {overflow && !showAll && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="text-xs px-2.5 py-1 rounded-full border border-cyber-border/30 text-cyber-accent/60 hover:text-cyber-accent hover:border-cyber-accent/50 transition-all"
+          >
+            +{allOptions.length - FIRST_BATCH} 更多
+          </button>
+        )}
+        {overflow && showAll && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="text-xs px-2.5 py-1 rounded-full border border-cyber-border/30 text-cyber-text2/50 hover:text-cyber-text2 transition-all"
+          >
+            收起
+ADC Panorama 全景数据库系统  V1.0    第 25 页
+
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function readUrlParams(): URLSearchParams {
+  if (typeof window === "undefined") return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
+}
+
+type PanelProps = {
+  stages: string[];
+  targets: string[];
+  indications: string[];
+  conjugationMethods: string[];
+  payloadClasses: string[];
+  linkerTypes: string[];
+};
+
+export default function FilterPanel({
+  stages,
+  targets,
+  indications,
+  conjugationMethods,
+  payloadClasses,
+  linkerTypes,
+}: PanelProps) {
+  const url = readUrlParams();
+  const current = {
+    stage: (url.get("stage") || "").split(",").filter(Boolean),
+    target: (url.get("target") || "").split(",").filter(Boolean),
+    indication: (url.get("indication") || "").split(",").filter(Boolean),
+    conjugationMethod: (url.get("conjugationMethod") || "").split(",").filter(Boolean),
+    payloadClass: (url.get("payloadClass") || "").split(",").filter(Boolean),
+    linkerType: (url.get("linkerType") || "").split(",").filter(Boolean),
+  };
+
+  // 点击某个筛选值时，在地址栏里对应param的逗号列表中增删
+  const handlePick = useCallback((param: string, val: string) => {
+    const q = new URLSearchParams(window.location.search);
+    const list = q.get(param)?.split(",").filter(Boolean) || [];
+    const pos = list.indexOf(val);
+    if (pos >= 0) {
+      list.splice(pos, 1);
+    } else {
+      list.push(val);
+    }
+    if (list.length > 0) {
+ADC Panorama 全景数据库系统  V1.0    第 26 页
+
+      q.set(param, list.join(","));
+    } else {
+      q.delete(param);
+    }
+    q.delete("page"); // 换筛选条件时重置到第一页
+    window.location.href = `/products?${q.toString()}`;
+  }, []);
+
+  const dirty = Object.values(current).some((arr) => arr.length > 0);
+
+  return (
+    <div className="cyber-card p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-bold text-cyber-text">筛选器</span>
+        {dirty && (
+          <button
+            onClick={() => { window.location.href = "/products"; }}
+            className="text-xs text-cyber-pink hover:text-cyber-pink/80 transition-colors"
+          >
+            清除全部
+          </button>
+        )}
+      </div>
+      <FilterGroup title="阶段" queryKey="stage" allOptions={stages} picked={current.stage} onPick={handlePick} />
+      <FilterGroup title="靶点" queryKey="target" allOptions={targets} picked={current.target} onPick={handlePick} />
+      <FilterGroup title="偶联方式" queryKey="conjugationMethod" allOptions={conjugationMethods} picked={current.conjugationMethod} onPick={handlePick} />
+      <FilterGroup title="载荷类型" queryKey="payloadClass" allOptions={payloadClasses} picked={current.payloadClass} onPick={handlePick} />
+      <FilterGroup title="连接子类型" queryKey="linkerType" allOptions={linkerTypes} picked={current.linkerType} onPick={handlePick} />
+
+      {/* 适应症用details/summary展开，因为数量太多了*/}
+      <details>
+        <summary className="text-xs font-semibold text-cyber-text2/70 uppercase tracking-wider cursor-pointer mb-2">
+          适应症
+        </summary>
+        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+          {indications.map((opt) => {
+            const selected = current.indication.includes(opt);
+            return (
+              <button
+                key={opt}
+                onClick={() => handlePick("indication", opt)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                  selected
+                    ? "bg-cyber-green/15 border-cyber-green/60 text-cyber-green"
+                    : "border-cyber-border/50 text-cyber-text2/70 hover:border-cyber-border hover:text-cyber-text"
+                }`}
+              >
+                {opt}
+              </button>
+            );
+ADC Panorama 全景数据库系统  V1.0    第 27 页
+
+          })}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+// ==== src/components/BookmarkButton.tsx ====
+"use client";
+
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+
+interface Props {
+  drugId: string;
+}
+
+export default function BookmarkButton({ drugId }: Props) {
+  const { data: session } = useSession();
+  const [bookmarked, setBookmarked] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user) { setChecked(true); return; }
+    fetch(`/api/bookmarks/${drugId}/`)
+      .then(r => r.json())
+      .then(d => { setBookmarked(d.bookmarked); setChecked(true); })
+      .catch(() => setChecked(true));
+  }, [drugId, session]);
+
+  async function toggle() {
+    if (!session?.user) return;
+    setLoading(true);
+    if (bookmarked) {
+      await fetch(`/api/bookmarks/${drugId}/`, { method: "DELETE" });
+      setBookmarked(false);
+    } else {
+      await fetch("/api/bookmarks/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ drugId }),
+      });
+      setBookmarked(true);
+    }
+    setLoading(false);
+  }
+
+  if (!checked) {
+    return <span className="w-7 h-7 rounded-full bg-cyber-border/20 animate-pulse" />;
+  }
+ADC Panorama 全景数据库系统  V1.0    第 28 页
+
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={loading}
+      title={bookmarked ? "取消收藏" : "收藏"}
+      className={`p-1.5 rounded-full transition-all ${
+        bookmarked
+          ? "text-yellow-400 hover:text-yellow-300 bg-yellow-400/10"
+          : "text-cyber-text2/40 hover:text-yellow-400 hover:bg-yellow-400/5"
+      }`}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    </button>
+  );
+}
+
+// ==== src/components/CommentSection.tsx ====
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+
+interface Comment {
+  id: number;
+  user_id: string;
+  drug_id: number;
+  parent_id: number | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export default function CommentSection({ drugId }: { drugId: string }) {
+  const { data: session } = useSession();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const loadComments = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/comments/drug/${drugId}/`);
+ADC Panorama 全景数据库系统  V1.0    第 29 页
+
+      const data = await res.json();
+      setComments(data.comments || []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [drugId]);
+
+  useEffect(() => { loadComments(); }, [loadComments]);
+
+  async function handleSubmit() {
+    if (!text.trim()) return;
+    setSubmitting(true);
+    const res = await fetch("/api/comments/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ drugId, content: text, parentId: replyTo }),
+    });
+    if (res.ok) {
+      setText("");
+      setReplyTo(null);
+      loadComments();
+    }
+    setSubmitting(false);
+  }
+
+  async function handleEdit(id: number) {
+    if (!editText.trim()) return;
+    const res = await fetch(`/api/comments/${id}/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: editText }),
+    });
+    if (res.ok) {
+      setEditingId(null);
+      setEditText("");
+      loadComments();
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("确定删除这条评论？")) return;
+    const res = await fetch(`/api/comments/${id}/`, { method: "DELETE" });
+    if (res.ok) loadComments();
+  }
+
+  // 按嵌套结构组织
+  const topComments = comments.filter(c => !c.parent_id);
+  const replies = (parentId: number) => comments.filter(c => c.parent_id === parentId);
+
+  return (
+    <div className="cyber-card p-5 mt-6">
+ADC Panorama 全景数据库系统  V1.0    第 30 页
+
+      <h3 className="text-sm font-bold text-cyber-text mb-4">
+        讨论 ({comments.length})
+      </h3>
+
+      {/* 评论输入框 */}
+      {session?.user ? (
+        <div className="mb-4">
+          {replyTo && (
+            <div className="text-xs text-cyber-text2 mb-1 flex items-center gap-2">
+              回复中
+              <button onClick={() => setReplyTo(null)} className="text-cyber-pink text-xs">取消</button>
+            </div>
+          )}
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder={replyTo ? "写下回复..." : "写下你的评论..."}
+            rows={2}
+            className="w-full bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-sm text-cyber-text placeholder:text-cyber-text2/40 focus:outline-none focus:border-cyber-accent resize-none"
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={!text.trim() || submitting}
+            className="mt-2 text-xs px-4 py-1.5 rounded-lg bg-cyber-accent text-cyber-bg font-bold hover:bg-cyan-400 transition-all disabled:opacity-50"
+          >
+            {submitting ? "发送中..." : "发表评论"}
+          </button>
+        </div>
+      ) : (
+        <div className="text-center py-4 mb-4 border border-cyber-border/30 rounded-lg">
+          <p className="text-sm text-cyber-text2/60">
+            <Link href="/login" className="text-cyber-accent hover:underline">登录</Link> 后参与讨论
+          </p>
+        </div>
+      )}
+
+      {/* 评论列表 */}
+      {loading ? (
+        <div className="text-center py-4 text-xs text-cyber-text2/50">加载中...</div>
+      ) : comments.length === 0 ? (
+        <div className="text-center py-4 text-xs text-cyber-text2/40">暂无评论</div>
+      ) : (
+        <div className="space-y-3">
+          {topComments.map(c => (
+            <div key={c.id}>
+              <CommentItem
+                comment={c}
+                userId={(session?.user as any)?.id}
+                onReply={id => { setReplyTo(id); setText(""); }}
+                onEdit={id => { setEditingId(id); setEditText(c.content); }}
+
+
+────────────────────────────────────────────────────────────
+  第二部分：源代码后 1500 行
+────────────────────────────────────────────────────────────
+ADC Panorama 全景数据库系统  V1.0    第 31 页
+
+            <p className="text-sm text-cyber-text2 mb-6">你的数据已提交，管理员审核通过后会加入数据库。</p>
+            <button onClick={() => { setDone(false); setDrugName(""); setFormData({}); }} className="text-sm px-4 py-2 rounded-lg bg-cyber-accent/10 text-cyber-accent border border-cyber-accent/30 hover:bg-cyber-accent/20 transition-all">
+              继续提交
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-xl font-extrabold gradient-text mb-2">提交数据</h1>
+        <p className="text-sm text-cyber-text2 mb-8">
+          提交新的 ADC 药物数据或修正现有数据，管理员审核通过后会更新到数据库。
+        </p>
+
+        <form onSubmit={handleSubmit} className="cyber-card p-6 space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-cyber-text2 uppercase block mb-1">药物名称 *</label>
+            <input
+              type="text"
+              value={drugName}
+              onChange={e => setDrugName(e.target.value)}
+              placeholder="ADC 药物名称或代号"
+              required
+              className="w-full bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-sm text-cyber-text focus:outline-none focus:border-cyber-accent"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {FORM_FIELDS.map(f => (
+              <div key={f.key}>
+                <label className="text-xs text-cyber-text2/70 block mb-1">{f.label}</label>
+                <input
+                  type="text"
+                  value={formData[f.key] || ""}
+                  onChange={e => setFormData({ ...formData, [f.key]: e.target.value })}
+                  placeholder={f.placeholder}
+                  className="w-full bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-sm text-cyber-text placeholder:text-cyber-text2/30 focus:outline-none focus:border-cyber-accent"
+                />
+              </div>
+            ))}
+          </div>
+
+          {error && <p className="text-sm text-cyber-pink">{error}</p>}
+
+          <button
+ADC Panorama 全景数据库系统  V1.0    第 32 页
+
+            type="submit"
+            disabled={submitting}
+            className="w-full py-2.5 rounded-lg bg-cyber-accent hover:bg-cyan-400 text-cyber-bg font-bold text-sm transition-all disabled:opacity-50"
+          >
+            {submitting ? "提交中..." : "提交审核"}
+          </button>
+        </form>
+      </main>
+    </>
+  );
+}
+
+// ==== src/app/admin/page.tsx ====
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import Link from "next/link";
+
+interface DashboardData {
+  totalDrugs: number;
+  totalUsers: number;
+  totalComments: number;
+  pendingSubmissions: number;
+  recentUsers: any[];
+  recentComments: any[];
+}
+
+export default function AdminPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === "unauthenticated") { router.push("/login"); return; }
+    if (status === "loading") return;
+    if ((session?.user as any)?.role !== "admin") { router.push("/"); return; }
+
+    async function load() {
+      const [dashRes, subRes] = await Promise.all([
+        fetch("/api/admin/dashboard/"),
+        fetch("/api/admin/submissions/?status=pending"),
+      ]);
+      setData(await dashRes.json());
+      setSubmissions((await subRes.json()).submissions || []);
+      setLoading(false);
+    }
+ADC Panorama 全景数据库系统  V1.0    第 33 页
+
+    load();
+  }, [session, status, router]);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 max-w-6xl mx-auto px-4 py-8">
+          <div className="text-center py-16 text-cyber-text2">加载中...</div>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-2xl font-extrabold gradient-text mb-8">管理后台</h1>
+
+        {/* 统计卡片 */}
+        {data && (
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: "药物总数", value: data.totalDrugs, color: "from-cyber-accent to-cyan-400" },
+              { label: "注册用户", value: data.totalUsers, color: "from-cyber-pink to-purple-400" },
+              { label: "评论总数", value: data.totalComments, color: "from-cyber-green to-emerald-400" },
+              { label: "待审核", value: data.pendingSubmissions, color: "from-cyber-orange to-yellow-400" },
+            ].map(card => (
+              <div key={card.label} className="cyber-card p-4 text-center">
+                <div className={`text-2xl font-extrabold bg-gradient-to-r ${card.color} bg-clip-text text-transparent`}>
+                  {card.value}
+                </div>
+                <div className="text-xs text-cyber-text2 mt-1">{card.label}</div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 待审核提交 */}
+          <section className="cyber-card p-5">
+            <h2 className="text-sm font-bold text-cyber-text mb-4">待审核数据提交</h2>
+            {submissions.length === 0 ? (
+              <p className="text-xs text-cyber-text2/40 text-center py-8">暂无待审核</p>
+            ) : (
+              <div className="space-y-3">
+                {submissions.map((sub: any) => (
+                  <div key={sub.id} className="border border-cyber-border/30 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+ADC Panorama 全景数据库系统  V1.0    第 34 页
+
+                      <span className="text-sm font-medium text-cyber-text">{sub.drug_name}</span>
+                      <span className="text-xs text-cyber-text2/60">{sub.display_name || sub.email}</span>
+                    </div>
+                    <pre className="text-xs text-cyber-text2/70 bg-cyber-bg rounded p-2 mb-2 max-h-24 overflow-y-auto">
+                      {JSON.stringify(sub.field_data, null, 2)}
+                    </pre>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          await fetch(`/api/admin/submissions/${sub.id}/`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ status: "approved" }),
+                          });
+                          setSubmissions(submissions.filter(s => s.id !== sub.id));
+                        }}
+                        className="text-xs px-3 py-1 rounded bg-cyber-green/20 text-cyber-green hover:bg-cyber-green/30 transition-all"
+                      >
+                        通过
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await fetch(`/api/admin/submissions/${sub.id}/`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ status: "rejected", reviewNote: "未通过审核" }),
+                          });
+                          setSubmissions(submissions.filter(s => s.id !== sub.id));
+                        }}
+                        className="text-xs px-3 py-1 rounded bg-cyber-pink/20 text-cyber-pink hover:bg-cyber-pink/30 transition-all"
+                      >
+                        拒绝
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* 最近注册 */}
+          <section className="cyber-card p-5">
+            <h2 className="text-sm font-bold text-cyber-text mb-4">最近注册用户</h2>
+            {data?.recentUsers.map((u: any) => (
+              <div key={u.id} className="flex items-center justify-between py-2 border-b border-cyber-border/20 last:border-0">
+                <div>
+                  <span className="text-sm text-cyber-text">{u.display_name || "未设置"}</span>
+                  <span className="text-xs text-cyber-text2/50 ml-2">{u.email}</span>
+                </div>
+                <span className="text-[10px] text-cyber-text2/40">
+ADC Panorama 全景数据库系统  V1.0    第 35 页
+
+                  {new Date(u.created_at).toLocaleDateString("zh-CN")}
+                </span>
+              </div>
+            ))}
+          </section>
+        </div>
+
+        {/* 数据提交入口 */}
+        <div className="mt-6 cyber-card p-5 text-center">
+          <p className="text-sm text-cyber-text2 mb-2">向用户开放数据提交功能</p>
+          <Link href="/submit" className="text-sm px-4 py-2 rounded-lg bg-cyber-accent/10 text-cyber-accent border border-cyber-accent/30 hover:bg-cyber-accent/20 transition-all no-underline">
+            打开提交页面
+          </Link>
+        </div>
+      </main>
+    </>
+  );
+}
+
+// ==== _api/drugs/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { eq, like, or, and, inArray, sql, asc, desc } from "drizzle-orm";
+
+export async function GET(request: NextRequest) {
+  const db = await getDb();
+  try {
+    const { searchParams } = request.nextUrl;
+    const search = searchParams.get("search") || "";
+    const stage = searchParams.get("stage") || "";
+    const target = searchParams.get("target") || "";
+    const payloadClass = searchParams.get("payloadClass") || "";
+    const conjugationMethod = searchParams.get("conjugationMethod") || "";
+    const sort = searchParams.get("sort") || "";
+    const order = searchParams.get("order") || "asc";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "15")));
+
+    const whereConditions: ReturnType<typeof eq>[] = [];
+
+    if (search) {
+      const s = `%${search}%`;
+      whereConditions.push(
+        or(
+          like(drugs.antibody, s),
+          like(drugs.brandName, s),
+          like(drugs.genericCn, s),
+          like(drugs.target, s),
+          like(drugs.companyOriginator, s)
+        )!
+ADC Panorama 全景数据库系统  V1.0    第 36 页
+
+      );
+    }
+
+    if (stage) {
+      const stages = stage.split(",");
+      if (stages.includes("临床阶段")) {
+        stages.push("临床I期", "临床II期", "临床III期", "NDA");
+      }
+      whereConditions.push(inArray(drugs.stage, stages));
+    }
+    if (target) whereConditions.push(inArray(drugs.target, target.split(",")));
+    if (payloadClass) whereConditions.push(inArray(drugs.payloadClass, payloadClass.split(",")));
+    if (conjugationMethod) whereConditions.push(inArray(drugs.conjugationMethod, conjugationMethod.split(",")));
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+    const offset = (page - 1) * pageSize;
+
+    const results = await db
+      .select()
+      .from(drugs)
+      .where(whereClause)
+      .orderBy(
+        sort === "brandName"
+          ? (order === "desc" ? desc(drugs.brandName) : asc(drugs.brandName))
+          : sort === "target"
+            ? (order === "desc" ? desc(drugs.target) : asc(drugs.target))
+            : sort === "stage"
+              ? (order === "desc" ? desc(drugs.stage) : asc(drugs.stage))
+              : sort === "approvalYear"
+                ? (order === "desc" ? desc(drugs.approvalYear) : asc(drugs.approvalYear))
+                : asc(drugs.id)
+      )
+      .limit(pageSize)
+      .offset(offset);
+
+    const [totalRow] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(whereClause);
+    const total = Number(totalRow?.count || 0);
+
+    return NextResponse.json({
+      products: results,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  } catch (error) {
+    console.error("API error:", error);
+ADC Panorama 全景数据库系统  V1.0    第 37 页
+
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== _api/drugs/[id]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { eq, or } from "drizzle-orm";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const db = await getDb();
+  try {
+    const { id } = await params;
+    const numId = parseInt(id);
+
+    const result = isNaN(numId)
+      ? await db.select().from(drugs).where(eq(drugs.adcdbId, id)).limit(1)
+      : await db
+          .select()
+          .from(drugs)
+          .where(or(eq(drugs.id, numId), eq(drugs.adcdbId, id)))
+          .limit(1);
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Drug not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(result[0]);
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== _api/formulation/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { isNotNull, or } from "drizzle-orm";
+
+const BUFFER_MAP: Record<string, string> = {
+  "柠檬酸钠": "柠檬酸盐", "柠檬酸": "柠檬酸",
+  "琥珀酸钠": "琥珀酸盐", "Tris": "Tris",
+  "组氨酸": "L-组氨酸", "MES": "MES",
+  "磷酸": "磷酸盐", "甘氨酸": "甘氨酸",
+};
+
+function classify(raw: string | null, map: Record<string, string>): string {
+ADC Panorama 全景数据库系统  V1.0    第 38 页
+
+  if (!raw) return "";
+  for (const [key, label] of Object.entries(map)) {
+    if (raw.includes(key)) return label;
+  }
+  return raw.split(" ")[0].split(";")[0].trim();
+}
+
+export async function GET(request: NextRequest) {
+  const db = await getDb();
+  try {
+    const { searchParams } = request.nextUrl;
+    const dosage = searchParams.get("dosage") || "";
+    const bufferFilter = searchParams.get("buffer") || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "12")));
+
+    const whereClause = or(
+      isNotNull(drugs.lyoBuffer),
+      isNotNull(drugs.lyoStabilizer),
+      isNotNull(drugs.lyoSurfactant),
+      isNotNull(drugs.lyoPh),
+      isNotNull(drugs.lyoCycle),
+      isNotNull(drugs.liquidExcipients)
+    );
+
+    const results = await db
+      .select()
+      .from(drugs)
+      .where(whereClause)
+      .orderBy(drugs.id)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    let filtered = results;
+    if (dosage === "冻干粉针") filtered = results.filter(r => r.lyophilization === true);
+    else if (dosage === "注射液") filtered = results.filter(r => r.lyophilization === false);
+
+    if (bufferFilter && bufferFilter !== "全部") {
+      filtered = filtered.filter(r => classify(r.lyoBuffer, BUFFER_MAP) === bufferFilter);
+    }
+
+    return NextResponse.json({ products: filtered, page, pageSize, total: filtered.length });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== _api/stats/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+ADC Panorama 全景数据库系统  V1.0    第 39 页
+
+import { drugs } from "@/lib/db/schema";
+import { or, isNotNull, sql, eq } from "drizzle-orm";
+
+export async function GET(_request: NextRequest) {
+  const db = await getDb();
+  try {
+    const [total] = await db.select({ count: sql<number>`count(*)` }).from(drugs);
+    const [withFormulation] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(or(isNotNull(drugs.lyoBuffer), isNotNull(drugs.lyoStabilizer), isNotNull(drugs.lyoPh), isNotNull(drugs.liquidExcipients)));
+    const [lyophilized] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(eq(drugs.lyophilization, true));
+    const [approved] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(eq(drugs.stage, "已上市"));
+
+    const targets = await db
+      .select({ target: drugs.target, count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(isNotNull(drugs.target))
+      .groupBy(drugs.target)
+      .orderBy(sql`count desc`)
+      .limit(10);
+
+    return NextResponse.json({
+      totalDrugs: Number(total?.count || 0),
+      withFormulation: Number(withFormulation?.count || 0),
+      lyophilized: Number(lyophilized?.count || 0),
+      approved: Number(approved?.count || 0),
+      topTargets: targets.map(t => ({ name: t.target, count: Number(t.count) })),
+    });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/auth/[...nextauth]/route.ts ====
+import { handlers } from "@/lib/auth";
+
+export const { GET, POST } = handlers;
+
+// ==== src/app/api/auth/register/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import mysql from "mysql2/promise";
+import crypto from "crypto";
+
+ADC Panorama 全景数据库系统  V1.0    第 40 页
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const { email, password, displayName } = await request.json();
+
+    if (!email || !password) {
+      return NextResponse.json({ error: "邮箱和密码不能为空" }, { status: 400 });
+    }
+
+    const emailClean = String(email).toLowerCase().trim();
+
+    if (password.length < 6) {
+      return NextResponse.json({ error: "密码至少6位" }, { status: 400 });
+    }
+
+    // 检查是否已存在
+    const [existing] = await pool.query("SELECT id FROM users WHERE email = ?", [emailClean]) as [any[], any];
+    if (existing.length > 0) {
+      return NextResponse.json({ error: "该邮箱已被注册" }, { status: 409 });
+    }
+
+    const id = crypto.randomUUID();
+    const hash = await bcrypt.hash(password, 12);
+    const name = displayName || emailClean.split("@")[0];
+
+    await pool.query(
+      "INSERT INTO users (id, email, password_hash, display_name, role) VALUES (?, ?, ?, ?, 'user')",
+      [id, emailClean, hash, name]
+    );
+
+    return NextResponse.json({ success: true, message: "注册成功" }, { status: 201 });
+  } catch (error) {
+    console.error("Register error:", error);
+    return NextResponse.json({ error: "注册失败" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/drugs/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { eq, like, or, and, inArray, sql, asc, desc } from "drizzle-orm";
+
+export async function GET(request: NextRequest) {
+  const db = await getDb();
+  try {
+    const { searchParams } = request.nextUrl;
+ADC Panorama 全景数据库系统  V1.0    第 41 页
+
+    const search = searchParams.get("search") || "";
+    const stage = searchParams.get("stage") || "";
+    const target = searchParams.get("target") || "";
+    const payloadClass = searchParams.get("payloadClass") || "";
+    const conjugationMethod = searchParams.get("conjugationMethod") || "";
+    const sort = searchParams.get("sort") || "";
+    const order = searchParams.get("order") || "asc";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "15")));
+
+    const whereConditions: ReturnType<typeof eq>[] = [];
+
+    if (search) {
+      const s = `%${search}%`;
+      whereConditions.push(
+        or(
+          like(drugs.antibody, s),
+          like(drugs.brandName, s),
+          like(drugs.genericCn, s),
+          like(drugs.target, s),
+          like(drugs.companyOriginator, s)
+        )!
+      );
+    }
+
+    if (stage) {
+      const stages = stage.split(",");
+      if (stages.includes("临床阶段")) {
+        stages.push("临床I期", "临床II期", "临床III期", "NDA");
+      }
+      whereConditions.push(inArray(drugs.stage, stages));
+    }
+    if (target) whereConditions.push(inArray(drugs.target, target.split(",")));
+    if (payloadClass) whereConditions.push(inArray(drugs.payloadClass, payloadClass.split(",")));
+    if (conjugationMethod) whereConditions.push(inArray(drugs.conjugationMethod, conjugationMethod.split(",")));
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+    const offset = (page - 1) * pageSize;
+
+    const results = await db
+      .select()
+      .from(drugs)
+      .where(whereClause)
+      .orderBy(
+        sort === "brandName"
+          ? (order === "desc" ? desc(drugs.brandName) : asc(drugs.brandName))
+          : sort === "target"
+            ? (order === "desc" ? desc(drugs.target) : asc(drugs.target))
+            : sort === "stage"
+              ? (order === "desc" ? desc(drugs.stage) : asc(drugs.stage))
+ADC Panorama 全景数据库系统  V1.0    第 42 页
+
+              : sort === "approvalYear"
+                ? (order === "desc" ? desc(drugs.approvalYear) : asc(drugs.approvalYear))
+                : asc(drugs.id)
+      )
+      .limit(pageSize)
+      .offset(offset);
+
+    const [totalRow] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(whereClause);
+    const total = Number(totalRow?.count || 0);
+
+    return NextResponse.json({
+      products: results,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/drugs/[id]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { eq, or } from "drizzle-orm";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const db = await getDb();
+  try {
+    const { id } = await params;
+    const numId = parseInt(id);
+
+    const result = isNaN(numId)
+      ? await db.select().from(drugs).where(eq(drugs.adcdbId, id)).limit(1)
+      : await db
+          .select()
+          .from(drugs)
+          .where(or(eq(drugs.id, numId), eq(drugs.adcdbId, id)))
+          .limit(1);
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Drug not found" }, { status: 404 });
+ADC Panorama 全景数据库系统  V1.0    第 43 页
+
+    }
+
+    return NextResponse.json(result[0]);
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/formulation/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { isNotNull, or } from "drizzle-orm";
+
+const BUFFER_MAP: Record<string, string> = {
+  "柠檬酸钠": "柠檬酸盐", "柠檬酸": "柠檬酸",
+  "琥珀酸钠": "琥珀酸盐", "Tris": "Tris",
+  "组氨酸": "L-组氨酸", "MES": "MES",
+  "磷酸": "磷酸盐", "甘氨酸": "甘氨酸",
+};
+
+function classify(raw: string | null, map: Record<string, string>): string {
+  if (!raw) return "";
+  for (const [key, label] of Object.entries(map)) {
+    if (raw.includes(key)) return label;
+  }
+  return raw.split(" ")[0].split(";")[0].trim();
+}
+
+export async function GET(request: NextRequest) {
+  const db = await getDb();
+  try {
+    const { searchParams } = request.nextUrl;
+    const dosage = searchParams.get("dosage") || "";
+    const bufferFilter = searchParams.get("buffer") || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "12")));
+
+    const whereClause = or(
+      isNotNull(drugs.lyoBuffer),
+      isNotNull(drugs.lyoStabilizer),
+      isNotNull(drugs.lyoSurfactant),
+      isNotNull(drugs.lyoPh),
+      isNotNull(drugs.lyoCycle),
+      isNotNull(drugs.liquidExcipients)
+    );
+
+    const results = await db
+      .select()
+      .from(drugs)
+ADC Panorama 全景数据库系统  V1.0    第 44 页
+
+      .where(whereClause)
+      .orderBy(drugs.id)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    let filtered = results;
+    if (dosage === "冻干粉针") filtered = results.filter(r => r.lyophilization === true);
+    else if (dosage === "注射液") filtered = results.filter(r => r.lyophilization === false);
+
+    if (bufferFilter && bufferFilter !== "全部") {
+      filtered = filtered.filter(r => classify(r.lyoBuffer, BUFFER_MAP) === bufferFilter);
+    }
+
+    return NextResponse.json({ products: filtered, page, pageSize, total: filtered.length });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/formulation/recipe/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { and, isNotNull, or, like } from "drizzle-orm";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 3 });
+
+// 分类映射（用于 LIKE 查询）
+const CLASS_TO_KEYWORDS: Record<string, string[]> = {
+  "柠檬酸盐": ["柠檬酸钠", "柠檬酸"],
+  "琥珀酸盐": ["琥珀酸钠", "琥珀酸"],
+  "Tris": ["Tris", "tris"],
+  "L-组氨酸": ["组氨酸", "histidine"],
+  "MES": ["MES"],
+  "磷酸盐": ["磷酸"],
+  "甘氨酸": ["甘氨酸", "glycine"],
+  "蔗糖": ["蔗糖", "sucrose"],
+  "海藻糖": ["海藻糖", "trehalose"],
+  "甘露醇": ["甘露醇", "mannitol"],
+  "氯化钠": ["氯化钠", "NaCl"],
+  "聚山梨酯80": ["聚山梨酯80", "Polysorbate 80", "Tween 80", "吐温80"],
+  "聚山梨酯20": ["聚山梨酯20", "Polysorbate 20", "Tween 20", "吐温20"],
+};
+
+function buildLikeClause(field: any, classification: string | null) {
+  if (!classification || !CLASS_TO_KEYWORDS[classification]) return undefined;
+  const keywords = CLASS_TO_KEYWORDS[classification];
+  return or(...keywords.map((kw: string) => like(field, `%${kw}%`)));
+ADC Panorama 全景数据库系统  V1.0    第 45 页
+
+}
+
+export async function GET(request: NextRequest) {
+  const db = await getDb();
+  try {
+    const { searchParams } = request.nextUrl;
+    const buffer = searchParams.get("buffer") || "";
+    const stabilizer = searchParams.get("stabilizer") || "";
+    const surfactant = searchParams.get("surfactant") || "";
+    const ph = searchParams.get("ph") || "";
+    const storage = searchParams.get("storage") || "";
+
+    // 基础条件：只查有配方数据的产品
+    const baseConditions = [
+      or(
+        isNotNull(drugs.lyoBuffer),
+        isNotNull(drugs.lyoStabilizer),
+        isNotNull(drugs.lyoSurfactant),
+        isNotNull(drugs.lyoPh),
+        isNotNull(drugs.liquidExcipients)
+      ),
+    ];
+
+    // 添加筛选条件
+    const bufCond = buildLikeClause(drugs.lyoBuffer, buffer);
+    const stabCond = buildLikeClause(drugs.lyoStabilizer, stabilizer);
+    const surfCond = buildLikeClause(drugs.lyoSurfactant, surfactant);
+
+    if (bufCond) baseConditions.push(bufCond);
+    if (stabCond) baseConditions.push(stabCond);
+    if (surfCond) baseConditions.push(surfCond);
+    if (ph) baseConditions.push(like(drugs.lyoPh, `%${ph}%`));
+    if (storage) baseConditions.push(like(drugs.storageCondition, `%${storage}%`));
+
+    const whereClause = and(...baseConditions);
+
+    const results = await db
+      .select()
+      .from(drugs)
+      .where(whereClause)
+      .orderBy(drugs.id)
+      .limit(100);
+
+    // 聚合配方
+    const aggregate = aggregateRecipe(results);
+
+    // 保存配方生成记录（仅登录用户）
+    const session = await auth().catch(() => null);
+    if (session?.user) {
+      const userId = (session.user as any).id;
+ADC Panorama 全景数据库系统  V1.0    第 46 页
+
+      const resultIds = results.map((r: any) => r.id).slice(0, 50);
+      await pool.query(
+        "INSERT INTO recipe_generations (user_id, parameters, result_ids) VALUES (?, ?, ?)",
+        [
+          userId,
+          JSON.stringify({ buffer, stabilizer, surfactant, ph, storage }),
+          JSON.stringify(resultIds),
+        ]
+      ).catch(() => { /* 静默失败，不影响主流程 */ });
+    }
+
+    return NextResponse.json({
+      products: results,
+      total: results.length,
+      aggregate,
+    });
+  } catch (error) {
+    console.error("Recipe API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+function mostCommon<T extends string | null>(items: T[]): T | undefined {
+  const freq = new Map<string, { val: T; count: number }>();
+  for (const item of items) {
+    if (!item) continue;
+    const k = String(item);
+    const entry = freq.get(k) || { val: item, count: 0 };
+    entry.count++;
+    freq.set(k, entry);
+  }
+  let best: { val: T; count: number } | undefined;
+  for (const entry of freq.values()) {
+    if (!best || entry.count > best.count) best = entry;
+  }
+  return best?.val;
+}
+
+function aggregateRecipe(matches: any[]) {
+  if (matches.length === 0) return null;
+
+  const buffers = matches.map(p => p.lyoBuffer as string | null).filter(Boolean);
+  const stabs = matches.map(p => p.lyoStabilizer as string | null).filter(Boolean);
+  const surfs = matches.map(p => p.lyoSurfactant as string | null).filter(Boolean);
+  const phs = matches.map(p => p.lyoPh as string | null).filter(Boolean);
+  const cycles = matches.map(p => p.lyoCycle as string | null).filter(Boolean);
+  const recons = matches.map(p => p.reconstitutionMedia as string | null).filter(Boolean);
+  const storages = matches.map(p => p.storageCondition as string | null).filter(Boolean);
+  const shelves = matches.map(p => p.shelfLife as string | null).filter(Boolean);
+  const containers = matches.map(p => p.containerClosure as string | null).filter(Boolean);
+ADC Panorama 全景数据库系统  V1.0    第 47 页
+
+
+  return {
+    buffer: mostCommon(buffers) || null,
+    stabilizer: mostCommon(stabs) || null,
+    surfactant: mostCommon(surfs) || null,
+    ph: mostCommon(phs) || null,
+    cycle: mostCommon(cycles) || null,
+    reconstitution: mostCommon(recons) || null,
+    storage: mostCommon(storages) || null,
+    shelfLife: mostCommon(shelves) || null,
+    container: mostCommon(containers) || null,
+  };
+}
+
+// ==== src/app/api/stats/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { drugs } from "@/lib/db/schema";
+import { or, isNotNull, sql, eq } from "drizzle-orm";
+
+export async function GET(_request: NextRequest) {
+  const db = await getDb();
+  try {
+    const [total] = await db.select({ count: sql<number>`count(*)` }).from(drugs);
+    const [withFormulation] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(or(isNotNull(drugs.lyoBuffer), isNotNull(drugs.lyoStabilizer), isNotNull(drugs.lyoPh), isNotNull(drugs.liquidExcipients)));
+    const [lyophilized] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(eq(drugs.lyophilization, true));
+    const [approved] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(eq(drugs.stage, "已上市"));
+
+    const targets = await db
+      .select({ target: drugs.target, count: sql<number>`count(*)` })
+      .from(drugs)
+      .where(isNotNull(drugs.target))
+      .groupBy(drugs.target)
+      .orderBy(sql`COUNT(*) DESC`)
+      .limit(10);
+
+    return NextResponse.json({
+      totalDrugs: Number(total?.count || 0),
+      withFormulation: Number(withFormulation?.count || 0),
+      lyophilized: Number(lyophilized?.count || 0),
+      approved: Number(approved?.count || 0),
+      topTargets: targets.map(t => ({ name: t.target, count: Number(t.count) })),
+ADC Panorama 全景数据库系统  V1.0    第 48 页
+
+    });
+  } catch (error) {
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/bookmarks/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 5 });
+
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { drugId, note } = await request.json();
+    const userId = (session.user as any).id;
+
+    // DrugId can be numeric or adcdb_id string
+    let drugIdNum = parseInt(String(drugId));
+    if (isNaN(drugIdNum)) {
+      const [rows] = await pool.query("SELECT id FROM drugs WHERE adcdb_id = ? LIMIT 1", [drugId]) as any[];
+      if (rows.length === 0) return NextResponse.json({ error: "药物不存在" }, { status: 404 });
+      drugIdNum = rows[0].id;
+    }
+
+    // Upsert: ignore if already exists
+    await pool.query(
+      "INSERT IGNORE INTO bookmarks (user_id, drug_id, note) VALUES (?, ?, ?)",
+      [userId, drugIdNum, note || null]
+    );
+
+    return NextResponse.json({ success: true }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: "收藏失败" }, { status: 500 });
+  }
+}
+
+export async function GET(_request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const userId = (session.user as any).id;
+    const [rows] = await pool.query(
+      `SELECT b.id, b.drug_id, b.note, b.created_at,
+              d.antibody, d.brand_name, d.generic_cn, d.stage, d.target
+ADC Panorama 全景数据库系统  V1.0    第 49 页
+
+       FROM bookmarks b
+       JOIN drugs d ON b.drug_id = d.id
+       WHERE b.user_id = ?
+       ORDER BY b.created_at DESC`,
+      [userId]
+    );
+    return NextResponse.json({ bookmarks: rows });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/bookmarks/[drugId]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 5 });
+
+// 检查是否已收藏
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ drugId: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { drugId } = await params;
+    const userId = (session.user as any).id;
+
+    let drugIdNum = parseInt(drugId);
+    if (isNaN(drugIdNum)) {
+      const [rows] = await pool.query("SELECT id FROM drugs WHERE adcdb_id = ? LIMIT 1", [drugId]) as any[];
+      if (rows.length === 0) return NextResponse.json({ bookmarked: false });
+      drugIdNum = rows[0].id;
+    }
+
+    const [rows] = await pool.query(
+      "SELECT id FROM bookmarks WHERE user_id = ? AND drug_id = ?",
+      [userId, drugIdNum]
+    ) as any[];
+
+    return NextResponse.json({ bookmarked: rows.length > 0 });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// 取消收藏
+export async function DELETE(
+ADC Panorama 全景数据库系统  V1.0    第 50 页
+
+  _request: NextRequest,
+  { params }: { params: Promise<{ drugId: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { drugId } = await params;
+    const userId = (session.user as any).id;
+
+    let drugIdNum = parseInt(drugId);
+    if (isNaN(drugIdNum)) {
+      const [rows] = await pool.query("SELECT id FROM drugs WHERE adcdb_id = ? LIMIT 1", [drugId]) as any[];
+      if (rows.length === 0) return NextResponse.json({ error: "药物不存在" }, { status: 404 });
+      drugIdNum = rows[0].id;
+    }
+
+    await pool.query("DELETE FROM bookmarks WHERE user_id = ? AND drug_id = ?", [userId, drugIdNum]);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/comments/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+// GET: 获取当前用户的评论历史（?mine=true）
+export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const mine = request.nextUrl.searchParams.get("mine");
+    const userId = (session.user as any).id;
+
+    if (mine === "true") {
+      const [rows] = await pool.query(
+        `SELECT c.id, c.drug_id, c.content, c.created_at,
+                d.brand_name, d.antibody
+         FROM comments c
+         LEFT JOIN drugs d ON c.drug_id = d.id
+         WHERE c.user_id = ?
+         ORDER BY c.created_at DESC
+ADC Panorama 全景数据库系统  V1.0    第 51 页
+
+         LIMIT 100`,
+        [userId]
+      );
+      return NextResponse.json({ comments: rows });
+    }
+
+    return NextResponse.json({ comments: [] });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  }
+
+  try {
+    const { drugId, content, parentId } = await request.json();
+    if (!drugId || !content?.trim()) {
+      return NextResponse.json({ error: "缺少参数" }, { status: 400 });
+    }
+
+    const userId = (session.user as any).id;
+
+    // 获取数字 drugId
+    let drugIdNum = parseInt(String(drugId));
+    if (isNaN(drugIdNum)) {
+      const [rows] = await pool.query("SELECT id FROM drugs WHERE adcdb_id = ? LIMIT 1", [drugId]) as any[];
+      if (rows.length === 0) return NextResponse.json({ error: "药物不存在" }, { status: 404 });
+      drugIdNum = rows[0].id;
+    }
+
+    const [result] = await pool.query(
+      "INSERT INTO comments (user_id, drug_id, parent_id, content) VALUES (?, ?, ?, ?)",
+      [userId, drugIdNum, parentId || null, content.trim()]
+    );
+
+    // 如果是回复，给原评论者发通知
+    if (parentId) {
+      const [parentRows] = await pool.query(
+        "SELECT user_id FROM comments WHERE id = ?", [parentId]
+      ) as any[];
+      if (parentRows.length > 0 && parentRows[0].user_id !== userId) {
+        await pool.query(
+          "INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, 'comment_reply', '有人回复了你的评论', ?, ?)",
+          [parentRows[0].user_id, content.trim().substring(0, 100), `/products/${drugId}`]
+        );
+      }
+ADC Panorama 全景数据库系统  V1.0    第 52 页
+
+    }
+
+    return NextResponse.json({ success: true, id: (result as any).insertId }, { status: 201 });
+  } catch (error) {
+    console.error("Comment POST error:", error);
+    return NextResponse.json({ error: "评论失败" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/comments/[id]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { id } = await params;
+    const { content } = await request.json();
+    const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
+
+    // 检查是否是评论所有者或 admin
+    const [rows] = await pool.query("SELECT user_id FROM comments WHERE id = ?", [id]) as any[];
+    if (rows.length === 0) return NextResponse.json({ error: "评论不存在" }, { status: 404 });
+    if (rows[0].user_id !== userId && userRole !== "admin") {
+      return NextResponse.json({ error: "无权修改" }, { status: 403 });
+    }
+
+    await pool.query("UPDATE comments SET content = ? WHERE id = ?", [content.trim(), id]);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Comment PUT error:", error);
+    return NextResponse.json({ error: "更新失败" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+ADC Panorama 全景数据库系统  V1.0    第 53 页
+
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { id } = await params;
+    const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
+
+    const [rows] = await pool.query("SELECT user_id FROM comments WHERE id = ?", [id]) as any[];
+    if (rows.length === 0) return NextResponse.json({ error: "评论不存在" }, { status: 404 });
+    if (rows[0].user_id !== userId && userRole !== "admin") {
+      return NextResponse.json({ error: "无权删除" }, { status: 403 });
+    }
+
+    await pool.query("DELETE FROM comments WHERE id = ?", [id]);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Comment DELETE error:", error);
+    return NextResponse.json({ error: "删除失败" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/comments/drug/[drugId]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ drugId: string }> }
+) {
+  try {
+    const { drugId } = await params;
+    const drugIdNum = parseInt(drugId);
+
+    // 查询评论并 JOIN 用户信息
+    const [rows] = await pool.query(
+      `SELECT c.id, c.user_id, c.drug_id, c.parent_id, c.content, c.created_at, c.updated_at,
+              u.display_name, u.avatar_url
+       FROM comments c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.drug_id = ?
+       ORDER BY c.created_at ASC`,
+      [isNaN(drugIdNum) ? drugId : drugIdNum]
+    );
+
+    // 如果按名字查不到，尝试按数字ID
+ADC Panorama 全景数据库系统  V1.0    第 54 页
+
+    let finalRows = rows;
+    if (Array.isArray(rows) && rows.length === 0 && isNaN(drugIdNum)) {
+      // Try by adcdb_id
+      const [drugRows] = await pool.query("SELECT id FROM drugs WHERE adcdb_id = ? LIMIT 1", [drugId]) as any[];
+      if (drugRows.length > 0) {
+        const [rows2] = await pool.query(
+          `SELECT c.id, c.user_id, c.drug_id, c.parent_id, c.content, c.created_at, c.updated_at,
+                  u.display_name, u.avatar_url
+           FROM comments c
+           LEFT JOIN users u ON c.user_id = u.id
+           WHERE c.drug_id = ?
+           ORDER BY c.created_at ASC`,
+          [drugRows[0].id]
+        );
+        finalRows = rows2;
+      }
+    }
+
+    return NextResponse.json({ comments: finalRows });
+  } catch (error) {
+    console.error("Comments GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/notifications/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+export async function GET(_request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const userId = (session.user as any).id;
+    const [rows] = await pool.query(
+      "SELECT id, type, title, body, link, `read`, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+      [userId]
+    );
+    const [unread] = await pool.query(
+      "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND `read` = 0",
+      [userId]
+    ) as any[];
+
+    return NextResponse.json({
+ADC Panorama 全景数据库系统  V1.0    第 55 页
+
+      notifications: rows,
+      unreadCount: unread[0]?.count || 0,
+    });
+  } catch (error) {
+    console.error("Notifications error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/notifications/[id]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL!,
+  connectionLimit: 5,
+});
+
+export async function PUT(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { id } = await params;
+    const userId = (session.user as any).id;
+
+    // "all" 表示全部标记已读
+    if (id === "all") {
+      await pool.query("UPDATE notifications SET `read` = 1 WHERE user_id = ?", [userId]);
+      return NextResponse.json({ success: true });
+    }
+
+    await pool.query("UPDATE notifications SET `read` = 1 WHERE id = ? AND user_id = ?", [id, userId]);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/submissions/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 5 });
+
+// GET: 获取当前用户的提交记录（?mine=true）
+export async function GET(request: NextRequest) {
+ADC Panorama 全景数据库系统  V1.0    第 56 页
+
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const mine = request.nextUrl.searchParams.get("mine");
+    if (mine === "true") {
+      const userId = (session.user as any).id;
+      const [rows] = await pool.query(
+        "SELECT id, drug_name, status, created_at, reviewed_at FROM submissions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+        [userId]
+      );
+      return NextResponse.json({ submissions: rows });
+    }
+    return NextResponse.json({ submissions: [] });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
+  try {
+    const { drugName, fieldData } = await request.json();
+    if (!drugName?.trim() || !fieldData) {
+      return NextResponse.json({ error: "请填写药物名称和数据" }, { status: 400 });
+    }
+
+    const userId = (session.user as any).id;
+    await pool.query(
+      "INSERT INTO submissions (user_id, drug_name, field_data) VALUES (?, ?, ?)",
+      [userId, drugName.trim(), JSON.stringify(fieldData)]
+    );
+
+    return NextResponse.json({ success: true, message: "提交成功，等待审核" }, { status: 201 });
+  } catch (error) {
+    console.error("Submission error:", error);
+    return NextResponse.json({ error: "提交失败" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/admin/dashboard/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { drugs, users, comments, submissions } from "@/lib/db/schema";
+import { sql, eq } from "drizzle-orm";
+
+export async function GET(_request: NextRequest) {
+  const session = await auth();
+ADC Panorama 全景数据库系统  V1.0    第 57 页
+
+  if (!session?.user || (session.user as any).role !== "admin") {
+    return NextResponse.json({ error: "无权限" }, { status: 403 });
+  }
+
+  try {
+    const db = await getDb();
+
+    const [totalDrugs] = await db.select({ n: sql<number>`count(*)` }).from(drugs);
+    const [totalUsers] = await db.select({ n: sql<number>`count(*)` }).from(users);
+    const [totalComments] = await db.select({ n: sql<number>`count(*)` }).from(comments);
+    const [pendingSubs] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(submissions)
+      .where(eq(submissions.status, "pending"));
+
+    // 最近注册用户
+    const recentUsers = await db
+      .select({ id: users.id, email: users.email, displayName: users.displayName, createdAt: users.createdAt })
+      .from(users)
+      .orderBy(sql`created_at DESC`)
+      .limit(5);
+
+    // 最近评论
+    const recentComments = await db
+      .select({ id: comments.id, content: comments.content, userId: comments.userId, createdAt: comments.createdAt })
+      .from(comments)
+      .orderBy(sql`created_at DESC`)
+      .limit(5);
+
+    return NextResponse.json({
+      totalDrugs: Number(totalDrugs?.n || 0),
+      totalUsers: Number(totalUsers?.n || 0),
+      totalComments: Number(totalComments?.n || 0),
+      pendingSubmissions: Number(pendingSubs?.n || 0),
+      recentUsers,
+      recentComments,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/admin/submissions/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 5 });
+
+export async function GET(request: NextRequest) {
+ADC Panorama 全景数据库系统  V1.0    第 58 页
+
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "admin") {
+    return NextResponse.json({ error: "无权限" }, { status: 403 });
+  }
+
+  try {
+    const status = request.nextUrl.searchParams.get("status") || "pending";
+    const [rows] = await pool.query(
+      `SELECT s.*, u.display_name, u.email
+       FROM submissions s
+       LEFT JOIN users u ON s.user_id = u.id
+       WHERE s.status = ?
+       ORDER BY s.created_at DESC
+       LIMIT 50`,
+      [status]
+    );
+    return NextResponse.json({ submissions: rows });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ==== src/app/api/admin/submissions/[id]/route.ts ====
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import mysql from "mysql2/promise";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL!, connectionLimit: 5 });
+
+// 表单字段 → 数据库列名映射
+const FIELD_MAP: Record<string, string> = {
+  antibody: "antibody",
+  brandName: "brand_name",
+  target: "target",
+  stage: "stage",
+  payloadName: "payload_name",
+  linkerName: "linker_name",
+  conjugationMethod: "conjugation_method",
+  dosageForm: "dosage_form",
+  lyoBuffer: "lyo_buffer",
+  lyoStabilizer: "lyo_stabilizer",
+  lyoSurfactant: "lyo_surfactant",
+  lyoPh: "lyo_ph",
+  storageCondition: "storage_condition",
+  referenceUrl: "reference_url",
+};
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+ADC Panorama 全景数据库系统  V1.0    第 59 页
+
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "admin") {
+    return NextResponse.json({ error: "无权限" }, { status: 403 });
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    const { id } = await params;
+    const { status, reviewNote } = await request.json();
+    const reviewerId = (session.user as any).id;
+
+    // 获取提交记录
+    const [rows] = await conn.query("SELECT * FROM submissions WHERE id = ?", [id]) as any[];
+    if (rows.length === 0) {
+      conn.release();
+      return NextResponse.json({ error: "提交不存在" }, { status: 404 });
+    }
+    const sub = rows[0];
+
+    // 如果审核通过，将数据写入 drugs 表
+    if (status === "approved") {
+      const fieldData = typeof sub.field_data === "string"
+        ? JSON.parse(sub.field_data)
+        : sub.field_data || {};
+
+      // 构建 INSERT 列和值
+      const columns: string[] = [];
+      const values: any[] = [];
+      const placeholders: string[] = [];
+
+      // drug_name 作为品牌名
+      if (sub.drug_name) {
+        columns.push("brand_name");
+        values.push(sub.drug_name);
+        placeholders.push("?");
+      }
+
+      for (const [camelKey, value] of Object.entries(fieldData)) {
+        const col = FIELD_MAP[camelKey];
+        if (col && value && String(value).trim()) {
+          columns.push(col);
+          values.push(String(value).trim());
+          placeholders.push("?");
+        }
+      }
+
+      let newDrugId: number | null = null;
+
+      if (columns.length > 0) {
+        const [result] = await conn.query(
+ADC Panorama 全景数据库系统  V1.0    第 60 页
+
+          `INSERT INTO drugs (${columns.join(", ")}) VALUES (${placeholders.join(", ")})`,
+          values
+        );
+        newDrugId = (result as any).insertId;
+
+        // 写入 data_changelog
+        const changelogValues = columns.map((col, i) => [
+          newDrugId,
+          reviewerId,
+          col,
+          null,
+          String(values[i]),
+          "user_submit",
+        ]);
+
+        for (const entry of changelogValues) {
+          await conn.query(
+            "INSERT INTO data_changelog (drug_id, user_id, field, old_value, new_value, source) VALUES (?, ?, ?, ?, ?, ?)",
+            entry
+          );
+        }
+      }
+    }
+
+    // 更新提交状态
+    await conn.query(
+      "UPDATE submissions SET status = ?, reviewer_id = ?, review_note = ?, reviewed_at = NOW() WHERE id = ?",
+      [status, reviewerId, reviewNote || "", id]
+    );
+
+    // 通知提交者
+    const notificationType = status === "approved" ? "submission_approved" : "submission_rejected";
+    const notificationTitle = status === "approved" ? "数据提交已通过" : "数据提交未通过";
+    const notificationBody = status === "approved"
+      ? `你提交的「${sub.drug_name || "新药数据"}」已通过审核，已加入数据库`
+      : `你提交的「${sub.drug_name || "新药数据"}」未通过审核${reviewNote ? `：${reviewNote}` : ""}`;
+
+    await conn.query(
+      "INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, '/products')",
+      [sub.user_id, notificationType, notificationTitle, notificationBody.substring(0, 500)]
+    );
+
+    conn.release();
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    conn.release();
+    console.error("Submission review error:", error);
+    return NextResponse.json({ error: "操作失败" }, { status: 500 });
+  }
+}
