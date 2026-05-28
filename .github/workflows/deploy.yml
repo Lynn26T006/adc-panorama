@@ -23,7 +23,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
+      - run: mv src/app/api src/app/_api
+
+      - run: NEXT_OUTPUT=export npm run build
 
       - uses: actions/configure-pages@v4
 
