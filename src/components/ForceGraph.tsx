@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { ADCProduct } from "@/lib/types";
+import type { ADCProduct } from "@/lib/types";
+import { fetchDrugs } from "@/lib/api-client";
 
-// 把临床阶段映射到球面上的纬度带 + 颜色 + 节点大小
-// 从北极（已上市）到南极（IND），越高越成熟
 const STAGE_CONFIG: Record<string, { clr: string; sz: number; lat: [number, number] }> = {
   "已上市": { clr: "#69f0ae", sz: 0.035, lat: [60, 90] },
   "NDA": { clr: "#f44336", sz: 0.03, lat: [30, 55] },
@@ -16,9 +15,9 @@ const STAGE_CONFIG: Record<string, { clr: string; sz: number; lat: [number, numb
   "IND": { clr: "#ff6ec7", sz: 0.02, lat: [-90, -55] },
 };
 
-interface Props { products: ADCProduct[]; }
+interface Props { products?: ADCProduct[]; }
 
-export default function ForceGraph({ products }: Props) {
+export default function ForceGraph({ products: initialProducts }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const threeScene = useRef<THREE.Scene | null>(null);
   const orbitCtrl = useRef<OrbitControls | null>(null);
@@ -26,8 +25,26 @@ export default function ForceGraph({ products }: Props) {
   const [hovered, setHovered] = useState<ADCProduct | null>(null);
   const [picked, setPicked] = useState<ADCProduct | null>(null);
   const [tipXY, setTipXY] = useState({ x: 0, y: 0 });
+  const [products, setProducts] = useState<ADCProduct[]>(initialProducts || []);
+  const [loading, setLoading] = useState(!initialProducts);
 
-  // 只展示有品牌名、非终止、且在六个目标阶段内的药物
+  const loadProducts = useCallback(async () => {
+    if (initialProducts?.length) return;
+    try {
+      setLoading(true);
+      const res = await fetchDrugs({ pageSize: 9999 });
+      setProducts(res.products);
+    } catch {
+      // keep empty
+    } finally {
+      setLoading(false);
+    }
+  }, [initialProducts]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
   const visible = useMemo(
     () => products.filter(
       (d) => d.brandName?.length > 1 && !d.stage.includes("终止") &&
@@ -38,7 +55,7 @@ export default function ForceGraph({ products }: Props) {
 
   useEffect(() => {
     const box = boxRef.current;
-    if (!box) return;
+    if (!box || visible.length === 0) return;
 
     const w = box.clientWidth;
     const h = box.clientHeight;
@@ -254,7 +271,16 @@ export default function ForceGraph({ products }: Props) {
 
   return (
     <div className="relative w-full" style={{ height: "calc(100vh - 180px)", minHeight: "500px" }}>
-      <div ref={boxRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border" />
+      <div ref={boxRef} className="w-full h-full bg-[#020810] rounded-xl overflow-hidden border border-cyber-border">
+        {loading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-cyber-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-cyber-text2">加载星球图谱...</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 鼠标悬停时的浮动提示 */}
       {hovered && !picked && (

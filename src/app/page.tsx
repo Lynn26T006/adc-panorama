@@ -8,7 +8,8 @@ import Navbar from "@/components/Navbar";
 import StatsCards from "@/components/StatsCards";
 import SearchBar from "@/components/SearchBar";
 import ClickableField from "@/components/ClickableField";
-import ForceGraph from "@/components/ForceGraph";
+import ResponsiveGlobe from "@/components/ResponsiveGlobe";
+import ForceGraphWrapper from "@/components/ForceGraphWrapper";
 
 export const metadata: Metadata = {
   title: "ADC Panorama，全球ADC药物全景图谱",
@@ -72,7 +73,9 @@ export default function HomePage() {
         {/* 第3区: 3D 星球可视化图谱 */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
           <div className="cyber-card overflow-hidden">
-            <ForceGraph products={allProducts} />
+            <ResponsiveGlobe>
+              <ForceGraphWrapper />
+            </ResponsiveGlobe>
           </div>
         </section>
 
