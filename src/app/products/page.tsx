@@ -2,20 +2,21 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { fetchDrugs, PaginatedResult } from "@/lib/api-client";
-import {
-  getProductStages,
-  getProductTargets,
-  getProductIndications,
-  getConjugationMethods,
-  getPayloadClasses,
-  getLinkerTypes,
-} from "@/lib/data";
 import Navbar from "@/components/Navbar";
 import SearchBar from "@/components/SearchBar";
 import ProductTable from "@/components/ProductTable";
 import ProductCard from "@/components/ProductCard";
 import Pagination from "@/components/Pagination";
 import FilterPanel from "@/components/FilterPanel";
+
+interface FilterData {
+  stages: string[];
+  targets: string[];
+  indications: string[];
+  conjugationMethods: string[];
+  payloadClasses: string[];
+  linkerTypes: string[];
+}
 
 function parseParams(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -28,13 +29,10 @@ function parseParams(): Record<string, string> {
 export default function ProductsPage() {
   const [result, setResult] = useState<PaginatedResult | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const stages = getProductStages();
-  const targets = getProductTargets();
-  const indications = getProductIndications();
-  const conjugationMethods = getConjugationMethods();
-  const payloadClasses = getPayloadClasses();
-  const linkerTypes = getLinkerTypes();
+  const [filters, setFilters] = useState<FilterData>({
+    stages: [], targets: [], indications: [],
+    conjugationMethods: [], payloadClasses: [], linkerTypes: [],
+  });
 
   const loadData = useCallback(async () => {
     const params = parseParams();
@@ -59,6 +57,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadData();
+    fetch("/api/filters/").then(r => r.json()).then(setFilters).catch(() => {});
     const handlePop = () => loadData();
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -107,12 +106,12 @@ export default function ProductsPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="w-full lg:w-64 shrink-0">
             <FilterPanel
-              stages={stages}
-              targets={targets}
-              indications={indications}
-              conjugationMethods={conjugationMethods}
-              payloadClasses={payloadClasses}
-              linkerTypes={linkerTypes}
+              stages={filters.stages}
+              targets={filters.targets}
+              indications={filters.indications}
+              conjugationMethods={filters.conjugationMethods}
+              payloadClasses={filters.payloadClasses}
+              linkerTypes={filters.linkerTypes}
             />
           </aside>
 
