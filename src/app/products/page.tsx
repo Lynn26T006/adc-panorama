@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   getProductStages,
   getProductTargets,
@@ -25,14 +25,20 @@ function parseParams(): Record<string, string> {
   return params;
 }
 
-const stages = getProductStages();
-const targets = getProductTargets();
-const indications = getProductIndications();
-const conjugationMethods = getConjugationMethods();
-const payloadClasses = getPayloadClasses();
-const linkerTypes = getLinkerTypes();
+function getFilters() {
+  if (typeof window === "undefined") return { stages: [], targets: [], indications: [], conjugationMethods: [], payloadClasses: [], linkerTypes: [] };
+  return {
+    stages: getProductStages(),
+    targets: getProductTargets(),
+    indications: getProductIndications(),
+    conjugationMethods: getConjugationMethods(),
+    payloadClasses: getPayloadClasses(),
+    linkerTypes: getLinkerTypes(),
+  };
+}
 
 export default function ProductsPage() {
+  const [filters] = useState(getFilters);
   const params = parseParams();
   const result = useMemo(() => filterAndPaginate({
     search: params.search,
@@ -72,12 +78,12 @@ export default function ProductsPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="w-full lg:w-64 shrink-0">
             <FilterPanel
-              stages={stages}
-              targets={targets}
-              indications={indications}
-              conjugationMethods={conjugationMethods}
-              payloadClasses={payloadClasses}
-              linkerTypes={linkerTypes}
+              stages={filters.stages}
+              targets={filters.targets}
+              indications={filters.indications}
+              conjugationMethods={filters.conjugationMethods}
+              payloadClasses={filters.payloadClasses}
+              linkerTypes={filters.linkerTypes}
             />
           </aside>
 

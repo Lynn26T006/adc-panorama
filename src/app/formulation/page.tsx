@@ -29,8 +29,13 @@ function buildPages(current: number, total: number): (number | "...")[] {
   return pages;
 }
 
+function getData() {
+  if (typeof window === "undefined") return [];
+  return getProductsWithFormulation();
+}
+
 export default function FormulationPage() {
-  const allProducts = useMemo(() => getProductsWithFormulation(), []);
+  const allProducts = useMemo(() => getData(), []);
   const lyophilized = allProducts.filter(p => p.lyophilization).length;
   const approved = allProducts.filter(p => p.stage === "已上市").length;
 
