@@ -119,10 +119,11 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-2">
                 {topTargets.map((t) => {
                   const count = allProducts.filter((p) => p.target === t).length;
+                  const short = t.length > 20 ? t.slice(0, 18) + "…" : t;
                   return (
                     <ClickableField
                       key={t}
-                      value={`${t} (${count})`}
+                      value={`${short} (${count})`}
                       href={`/products?target=${encodeURIComponent(t)}`}
                       color="pink"
                     />
