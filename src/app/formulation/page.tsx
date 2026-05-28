@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
-import { fetchFormulation, fetchStats, type StatsResult, type ADCProduct } from "@/lib/api-client";
+import type { ADCProduct } from "@/lib/api-client";
 import { classifyBuffer, classifyStabilizer, classifySurfactant } from "@/lib/classifiers";
+import { getProductsWithFormulation } from "@/lib/data";
 
 const PAGE_SIZE = 12;
 
@@ -29,28 +30,9 @@ function buildPages(current: number, total: number): (number | "...")[] {
 }
 
 export default function FormulationPage() {
-  const [allProducts, setAllProducts] = useState<ADCProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [stats, setStats] = useState<StatsResult | null>(null);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const [formRes, statsRes] = await Promise.all([
-          fetchFormulation({ pageSize: 100 }),
-          fetchStats(),
-        ]);
-        setAllProducts(formRes.products);
-        setStats(statsRes);
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const allProducts = useMemo(() => getProductsWithFormulation(), []);
+  const lyophilized = allProducts.filter(p => p.lyophilization).length;
+  const approved = allProducts.filter(p => p.stage === "已上市").length;
 
   const bufferClasses = useMemo(
     () => [...new Set(allProducts.map(p => classifyBuffer(p.lyoExcipientsBuffer)).filter(Boolean))].sort(),
@@ -159,41 +141,20 @@ export default function FormulationPage() {
     <>
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="w-8 h-8 border-2 border-cyber-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm text-cyber-text2">从数据库加载制剂数据...</p>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <p className="text-cyber-pink text-sm mb-2">数据加载失败</p>
-              <button
-                onClick={() => { setError(false); setLoading(true); window.location.reload(); }}
-                className="text-xs px-4 py-1.5 rounded-lg border border-cyber-accent/40 text-cyber-accent hover:bg-cyber-accent/10 transition-all"
-              >
-                重新加载
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
         <div className="mb-8">
           <h1 className="text-2xl font-extrabold gradient-text">制剂与冻干工艺</h1>
           <p className="text-sm text-cyber-text2 mt-1">
-            覆盖冻干粉针与注射液配方数据 · {stats?.withFormulation || allProducts.length} 款产品
+            覆盖冻干粉针与注射液配方数据 · {allProducts.length} 款产品
           </p>
         </div>
 
         <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
           {[
-            { label: "制剂产品", value: stats?.withFormulation || allProducts.length, gradient: "from-cyber-accent to-cyan-400" },
-            { label: "冻干粉针", value: stats?.lyophilized || 0, gradient: "from-cyber-pink to-purple-400" },
-            { label: "已上市ADC", value: stats?.approved || 0, gradient: "from-cyber-green to-emerald-400" },
+            { label: "制剂产品", value: allProducts.length, gradient: "from-cyber-accent to-cyan-400" },
+            { label: "冻干粉针", value: lyophilized, gradient: "from-cyber-pink to-purple-400" },
+            { label: "已上市ADC", value: approved, gradient: "from-cyber-green to-emerald-400" },
             { label: "缓冲体系", value: bufferClasses.length, gradient: "from-cyber-orange to-yellow-400" },
-            { label: "总药物数", value: stats?.totalDrugs || 0, gradient: "from-cyber-accent2 to-violet-400" },
+            { label: "总药物数", value: allProducts.length, gradient: "from-cyber-accent2 to-violet-400" },
             { label: "稳定剂种类", value: stabilizerClasses.length, gradient: "from-cyber-green to-teal-400" },
           ].map(card => (
             <div key={card.label} className="cyber-card p-4 text-center">
@@ -579,8 +540,6 @@ export default function FormulationPage() {
             </div>
           </div>
         </section>
-          </>
-        )}
       </main>
     </>
   );

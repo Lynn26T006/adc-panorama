@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { fetchDrugs, PaginatedResult } from "@/lib/api-client";
+import { useMemo } from "react";
+import {
+  getProductStages,
+  getProductTargets,
+  getProductIndications,
+  getConjugationMethods,
+  getPayloadClasses,
+  getLinkerTypes,
+  filterAndPaginate,
+} from "@/lib/data";
 import Navbar from "@/components/Navbar";
 import SearchBar from "@/components/SearchBar";
 import ProductTable from "@/components/ProductTable";
 import ProductCard from "@/components/ProductCard";
 import Pagination from "@/components/Pagination";
 import FilterPanel from "@/components/FilterPanel";
-
-interface FilterData {
-  stages: string[];
-  targets: string[];
-  indications: string[];
-  conjugationMethods: string[];
-  payloadClasses: string[];
-  linkerTypes: string[];
-}
 
 function parseParams(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -26,63 +25,30 @@ function parseParams(): Record<string, string> {
   return params;
 }
 
+const stages = getProductStages();
+const targets = getProductTargets();
+const indications = getProductIndications();
+const conjugationMethods = getConjugationMethods();
+const payloadClasses = getPayloadClasses();
+const linkerTypes = getLinkerTypes();
+
 export default function ProductsPage() {
-  const [result, setResult] = useState<PaginatedResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterData>({
-    stages: [], targets: [], indications: [],
-    conjugationMethods: [], payloadClasses: [], linkerTypes: [],
-  });
-
-  const loadData = useCallback(async () => {
-    const params = parseParams();
-    setLoading(true);
-    try {
-      const r = await fetchDrugs({
-        search: params.search,
-        stage: params.stage,
-        target: params.target,
-        payloadClass: params.payloadClass,
-        conjugationMethod: params.conjugationMethod,
-        sort: params.sort,
-        order: params.order as "asc" | "desc" | undefined,
-        page: params.page ? parseInt(params.page) : 1,
-        pageSize: 15,
-      });
-      setResult(r);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-    fetch("/api/filters/").then(r => r.json()).then(setFilters).catch(() => {});
-    const handlePop = () => loadData();
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, [loadData]);
-
-  if (!result || loading) {
-    return (
-      <>
-        <Navbar />
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl font-extrabold gradient-text">ADC 产品列表</h1>
-            </div>
-          </div>
-          <div className="cyber-card p-12 text-center">
-            <div className="w-8 h-8 mx-auto border-2 border-cyber-accent border-t-transparent rounded-full animate-spin" />
-          </div>
-        </main>
-      </>
-    );
-  }
+  const params = parseParams();
+  const result = useMemo(() => filterAndPaginate({
+    search: params.search,
+    stage: params.stage,
+    target: params.target,
+    indication: params.indication,
+    conjugationMethod: params.conjugationMethod,
+    payloadClass: params.payloadClass,
+    linkerType: params.linkerType,
+    sort: params.sort,
+    order: params.order as "asc" | "desc" | undefined,
+    page: params.page ? parseInt(params.page) : 1,
+    pageSize: 15,
+  }), [params.search, params.stage, params.target, params.indication, params.conjugationMethod, params.payloadClass, params.linkerType, params.sort, params.order, params.page]);
 
   const { products, total, page, totalPages } = result;
-  const params = parseParams();
 
   return (
     <>
@@ -106,12 +72,12 @@ export default function ProductsPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="w-full lg:w-64 shrink-0">
             <FilterPanel
-              stages={filters.stages}
-              targets={filters.targets}
-              indications={filters.indications}
-              conjugationMethods={filters.conjugationMethods}
-              payloadClasses={filters.payloadClasses}
-              linkerTypes={filters.linkerTypes}
+              stages={stages}
+              targets={targets}
+              indications={indications}
+              conjugationMethods={conjugationMethods}
+              payloadClasses={payloadClasses}
+              linkerTypes={linkerTypes}
             />
           </aside>
 
