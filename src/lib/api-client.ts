@@ -177,7 +177,7 @@ export async function fetchDrugs(params: {
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== "") q.set(k, String(v));
   });
-  const raw = await fetchJson<{ products: DrugRow[]; total: number; page: number; pageSize: number; totalPages: number }>(`${BASE}/api/drugs?${q.toString()}`);
+  const raw = await fetchJson<{ products: DrugRow[]; total: number; page: number; pageSize: number; totalPages: number }>(`${BASE}/api/drugs/?${q.toString()}`);
   return { ...raw, products: raw.products.map(normalizeDrug) };
 }
 
@@ -198,14 +198,14 @@ export async function fetchFormulation(params: {
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== "") q.set(k, String(v));
   });
-  const raw = await fetchJson<{ products: DrugRow[]; page: number; pageSize: number; total: number }>(`${BASE}/api/formulation?${q.toString()}`);
+  const raw = await fetchJson<{ products: DrugRow[]; page: number; pageSize: number; total: number }>(`${BASE}/api/formulation/?${q.toString()}`);
   return { ...raw, products: raw.products.map(normalizeDrug) };
 }
 
 // ---- Stats API ----
 
 export async function fetchStats(): Promise<StatsResult> {
-  return fetchJson(`${BASE}/api/stats`);
+  return fetchJson(`${BASE}/api/stats/`);
 }
 
 // ---- Static helpers (for client-side filter options) ----
