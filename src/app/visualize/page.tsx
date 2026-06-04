@@ -1,12 +1,15 @@
 import { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import ForceGraphWrapper from "@/components/ForceGraphWrapper";
+import { getAllProducts } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "可视化图谱，ADC Panorama",
 };
 
 export default function VisualizePage() {
+  const allProducts = getAllProducts();
+
   return (
     <>
       <Navbar />
@@ -22,7 +25,7 @@ export default function VisualizePage() {
           </div>
         </div>
         <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-8">
-          <ForceGraphWrapper />
+          <ForceGraphWrapper products={allProducts} />
         </div>
       </main>
     </>
